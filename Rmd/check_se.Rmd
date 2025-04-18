@@ -9,7 +9,7 @@ output:
     variant: "gfm"
 params:
   exp_id: NA
-  module_name: "RMD02_check_se"
+  module_name: "check_se"
   input_se: "raw_se"
   output_se: "raw_se"
 ---

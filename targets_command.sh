@@ -63,7 +63,15 @@ case "$COMMAND" in
     Rscript -e "targets::tar_make($*)"
     ;;
   vis)
-    Rscript -e "targets::tar_visnetwork($*)"
+    echo "Generating PNG visualization (targets_network.png)..."
+    Rscript R/generate_vis_png.R --output targets_network.png $*
+    EXIT_CODE=$?
+    if [ $EXIT_CODE -eq 0 ]; then
+      echo "PNG generated successfully: targets_network.png"
+    else
+      echo "Error generating PNG."
+      exit $EXIT_CODE
+    fi
     ;;
   outdated)
     Rscript -e "targets::tar_outdated($*)"

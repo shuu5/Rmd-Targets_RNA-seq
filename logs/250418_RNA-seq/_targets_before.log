@@ -1,22 +1,53 @@
-INFO [2025-04-18 22:47:06] ログディレクトリを作成し、ロガーを初期化しました (experiment_id: 250418_RNA-seq)
-INFO [2025-04-18 22:47:06] ログファイルは /home/rstudio/projects/Rmd_targets_RNA-seq/logs/250418_RNA-seq/_targets.log に書き込まれます
-INFO [2025-04-18 22:47:06] ターゲット開始: report_check_se (ensure_report_dir に依存)
-INFO [2025-04-18 22:47:07] [RMD02_check_se] ====== モジュール実行開始: RMD02_check_se ======
-INFO [2025-04-18 22:47:07] [RMD02_check_se] 入力SEオブジェクト: 12 サンプル, 62700 遺伝子
-INFO [2025-04-18 22:47:07] [RMD02_check_se] データを読み込みました: raw_se
-INFO [2025-04-18 22:47:07] [RMD02_check_se] SE オブジェクト概要を表示しました
-INFO [2025-04-18 22:47:07] [RMD02_check_se] Assay名: counts
-INFO [2025-04-18 22:47:07] [RMD02_check_se] Assayの次元: 62700行 x 12列
-INFO [2025-04-18 22:47:07] [RMD02_check_se] colDataの次元: 12行 x 5列
-INFO [2025-04-18 22:47:07] [RMD02_check_se] colDataの列名: cell_line, assay, target_gene, condition, replicate
-INFO [2025-04-18 22:47:07] [RMD02_check_se] rowDataの次元: 62700行 x 4列
-INFO [2025-04-18 22:47:07] [RMD02_check_se] rowDataの列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
-INFO [2025-04-18 22:47:08] [RMD02_check_se] 遺伝子タイプの分布プロットを作成し保存しました
-INFO [2025-04-18 22:47:08] [RMD02_check_se] protein_coding遺伝子数: 20063 (全体の 32.00%)
-INFO [2025-04-18 22:47:08] [RMD02_check_se] protein_coding遺伝子のrowDataに欠損値はありません
-INFO [2025-04-18 22:47:09] [RMD02_check_se] 各サンプルのライブラリサイズ比較プロットを作成し保存しました
-INFO [2025-04-18 22:47:10] [RMD02_check_se] 密度プロットを作成し保存しました
-INFO [2025-04-18 22:47:11] [RMD02_check_se] メタデータを確認しました
-INFO [2025-04-18 22:47:11] [RMD02_check_se] SEオブジェクトのメタデータを更新しました
-INFO [2025-04-18 22:47:11] [RMD02_check_se] ====== モジュール実行完了 ======
-INFO [2025-04-18 22:47:11] Rmd のレンダリングに成功しました: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/reports/RMD02_check_se.html
+INFO [2025-04-18 23:41:54] ログディレクトリを作成し、ロガーを初期化しました (experiment_id: 250418_RNA-seq)
+INFO [2025-04-18 23:41:54] ログファイルは /home/rstudio/projects/Rmd_targets_RNA-seq/logs/250418_RNA-seq/_targets.log に書き込まれます
+INFO [2025-04-18 23:41:54] ターゲット開始: ensure_report_dir (ensure_log_dir に依存)
+INFO [2025-04-18 23:41:54] レポートディレクトリを確認しました: results/250418_RNA-seq/reports
+INFO [2025-04-18 23:41:54] ターゲット開始: raw_se (ensure_log_dir に依存)
+INFO [2025-04-18 23:41:54] 実験ID: 250418_RNA-seq のSEオブジェクト作成を開始します。
+INFO [2025-04-18 23:41:54] カウントファイルパス: data/250418_RNA-seq/counts.csv
+INFO [2025-04-18 23:41:54] メタデータファイルパス: data/250418_RNA-seq/sample_metadata.csv
+INFO [2025-04-18 23:41:54] 遺伝子ID列: gene_id
+INFO [2025-04-18 23:41:54] サンプルID列: sample_id
+INFO [2025-04-18 23:41:54] biomaRt ホスト: https://ensembl.org
+INFO [2025-04-18 23:41:54] biomaRt データセット: hsapiens_gene_ensembl
+INFO [2025-04-18 23:41:54] biomaRt 属性: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
+INFO [2025-04-18 23:41:54] 入力ファイルが存在します。
+INFO [2025-04-18 23:41:54] カウントファイルを正常に読み込みました。
+INFO [2025-04-18 23:41:54] メタデータファイルを正常に読み込みました。
+INFO [2025-04-18 23:41:54] サンプルIDはカウントヘッダーとメタデータ列 'sample_id' で一致します。
+INFO [2025-04-18 23:41:54] サンプルメタデータをカウントデータの列に合わせて並べ替えました。
+INFO [2025-04-18 23:41:54] カウントマトリックスを準備しました。次元: 62700 行, 12 列。
+INFO [2025-04-18 23:41:54] カウントからのバージョン付き遺伝子IDの総数: 62700
+INFO [2025-04-18 23:41:54] バージョンを削除しました。biomaRtクエリ用の一意なバージョンなしID: 62700 個。
+INFO [2025-04-18 23:41:54] biomaRt ホストに接続中: https://ensembl.org, データセット: hsapiens_gene_ensembl
+INFO [2025-04-18 23:41:59] biomaRt に接続しました。
+INFO [2025-04-18 23:41:59] biomaRt 属性を取得中: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
+INFO [2025-04-18 23:42:57] biomaRt から 62700 個の一意なバージョンなしIDに対して 332576 個のアノテーションレコードを正常に取得しました。
+INFO [2025-04-18 23:42:57] ensembl_gene_id に基づいて 271095 行の重複したアノテーション行を削除しました。
+WARN [2025-04-18 23:42:58] biomaRt で 1219 個のバージョン付きIDがどのアノテーションにも一致しませんでした（列 'external_gene_name' でNA）。
+INFO [2025-04-18 23:42:58] アノテーションを rowData 用の DataFrame にフォーマットしました。次元: 62700 行, 4 列。
+INFO [2025-04-18 23:42:58] カウントマトリックスと rowData の行名が一致します。
+INFO [2025-04-18 23:42:58] SummarizedExperiment オブジェクトを正常に作成しました。
+INFO [2025-04-18 23:42:58] SE メタデータを experiment_id と空の pipeline_history で初期化しました。
+INFO [2025-04-18 23:42:58] 実験: 250418_RNA-seq のSEオブジェクト作成が完了しました。
+INFO [2025-04-18 23:42:58] ターゲット完了: raw_se
+INFO [2025-04-18 23:42:58] ターゲット開始: report_check_se (ensure_report_dir に依存)
+INFO [2025-04-18 23:42:58] [check_se] ====== モジュール実行開始: check_se ======
+INFO [2025-04-18 23:42:59] [check_se] 入力SEオブジェクト: 12 サンプル, 62700 遺伝子
+INFO [2025-04-18 23:42:59] [check_se] データを読み込みました: raw_se
+INFO [2025-04-18 23:42:59] [check_se] SE オブジェクト概要を表示しました
+INFO [2025-04-18 23:42:59] [check_se] Assay名: counts
+INFO [2025-04-18 23:42:59] [check_se] Assayの次元: 62700行 x 12列
+INFO [2025-04-18 23:42:59] [check_se] colDataの次元: 12行 x 5列
+INFO [2025-04-18 23:42:59] [check_se] colDataの列名: cell_line, assay, target_gene, condition, replicate
+INFO [2025-04-18 23:42:59] [check_se] rowDataの次元: 62700行 x 4列
+INFO [2025-04-18 23:42:59] [check_se] rowDataの列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
+INFO [2025-04-18 23:42:59] [check_se] 遺伝子タイプの分布プロットを作成し保存しました
+INFO [2025-04-18 23:42:59] [check_se] protein_coding遺伝子数: 20063 (全体の 32.00%)
+INFO [2025-04-18 23:42:59] [check_se] protein_coding遺伝子のrowDataに欠損値はありません
+INFO [2025-04-18 23:42:59] [check_se] 各サンプルのライブラリサイズ比較プロットを作成し保存しました
+INFO [2025-04-18 23:43:01] [check_se] 密度プロットを作成し保存しました
+INFO [2025-04-18 23:43:01] [check_se] メタデータを確認しました
+INFO [2025-04-18 23:43:01] [check_se] SEオブジェクトのメタデータを更新しました
+INFO [2025-04-18 23:43:01] [check_se] ====== モジュール実行完了 ======
+INFO [2025-04-18 23:43:02] Rmd のレンダリングに成功しました: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/reports/check_se.html

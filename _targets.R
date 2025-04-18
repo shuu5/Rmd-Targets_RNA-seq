@@ -5,7 +5,7 @@ library(fs)
 library(futile.logger)
 
 # 関数を読み込む
-source("R/R01_create_se.R")
+source("R/create_se.R")
 
 # ターゲットオプションの設定:
 # targets::tar_option_set() は、{targets} で推奨される方法として、
@@ -139,13 +139,13 @@ list(
       dir_path_placeholder <- ensure_report_dir # 依存関係を確立
       flog.info("ターゲット開始: report_check_se (ensure_report_dir に依存)")
       # 相対出力パスを定義
-      relative_output_path <- sprintf("results/%s/reports/RMD02_check_se.html", experiment_id)
+      relative_output_path <- sprintf("results/%s/reports/check_se.html", experiment_id)
       # 絶対パスに変換
       output_path <- fs::path_abs(relative_output_path)
       output_dir <- dirname(output_path)
 
       flog.debug("Rmd をレンダリング中: input=%s, output=%s, knit_root_dir=%s",
-                 fs::path_abs("Rmd/RMD02_check_se.Rmd"), output_path, fs::path_abs("."))
+                 fs::path_abs("Rmd/check_se.Rmd"), output_path, fs::path_abs("."))
 
       # レンダリング直前に出力ディレクトリが存在することを確認
       fs::dir_create(output_dir) # ここでも作成を試みる (ensure_report_dir が既に行っているはず)
@@ -161,11 +161,11 @@ list(
       # 絶対パスを使用してドキュメントをレンダリング
       render_result <- tryCatch({
           rmarkdown::render(
-            input = fs::path_abs("Rmd/RMD02_check_se.Rmd"), # 入力にも絶対パスを使用
+            input = fs::path_abs("Rmd/check_se.Rmd"), # 入力にも絶対パスを使用
             output_file = output_path, # すでに絶対パス
             params = list(
               exp_id = experiment_id,
-              module_name = "RMD02_check_se", 
+              module_name = "check_se", 
               input_se = "raw_se",
               output_se = "raw_se"
             ),
@@ -175,7 +175,7 @@ list(
           flog.info("Rmd のレンダリングに成功しました: %s", output_path)
           output_path # 成功したらパスを返す
         }, error = function(e) {
-          flog.error("Rmd '%s' のレンダリングに失敗しました: %s", fs::path_abs("Rmd/RMD02_check_se.Rmd"), e$message)
+          flog.error("Rmd '%s' のレンダリングに失敗しました: %s", fs::path_abs("Rmd/check_se.Rmd"), e$message)
           stop(e) # エラーを再スローしてターゲットを失敗させる
         })
       # 絶対出力ファイルパスを返す

@@ -18,9 +18,9 @@ your-project-root/
 ├── _targets/              # targets キャッシュとメタデータ (自動生成)
 ├── config.yaml            # パイプライン設定ファイル (例: experiment_id 指定)
 ├── R/                   # R 関数 (再利用可能なスクリプト)
-│   └── Rxx_*.R            # 例: R01_se_creation.R, R02_utils.R
+│   └── *.R            # 例: se_creation.R, utils.R
 ├── Rmd/                   # R Markdown モジュール (各解析ステップ)
-│   └── RMDxx_*.Rmd        # 例: RMD01_qc_report.Rmd, RMD02_normalization.Rmd
+│   └── *.Rmd        # 例: qc_report.Rmd, normalization.Rmd
 ├── data/                  # 入力データ (experiment_id ごとにサブディレクトリ化)
 │   └── {experiment_id}/   # 例: data/ExpA/
 │       ├── counts.csv
@@ -47,8 +47,8 @@ your-project-root/
 **主要ディレクトリの説明:**
 
 *   **`_targets.R`**: パイプラインのターゲット定義と依存関係を記述する中心ファイル。
-*   **`R/`**: `_targets.R` や Rmd モジュールから呼び出す共通 R 関数 (`.R`) を格納。ファイル名は `Rxx_*.R` (連番 `xx` と内容を示す名前) を推奨。
-*   **`Rmd/`**: 解析ステップごとの R Markdown モジュール (`.Rmd`) を格納。ファイル名は `RMDxx_*.Rmd` (連番 `xx` と内容を示す名前) を推奨。実行順序は `_targets.R` で定義される。
+*   **`R/`**: `_targets.R` や Rmd モジュールから呼び出す共通 R 関数 (`.R`) を格納。ファイル名は内容を示す名前を推奨。
+*   **`Rmd/`**: 解析ステップごとの R Markdown モジュール (`.Rmd`) を格納。ファイル名は内容を示す名前を推奨。実行順序は `_targets.R` で定義される。
 *   **`data/{experiment_id}/`**: **`experiment_id` ごとに** サブディレクトリを作成し、その実験に対応する入力データ (カウント、メタデータ等) を格納。`_targets.R` 内で `sprintf("data/%s/counts.csv", experiment_id)` のように動的にパスを生成するが、**最終的に関数やレンダリングプロセスに渡されるパスは `fs::path_abs()` を用いて絶対パスに変換することを推奨する。**
 *   **`results/{experiment_id}/`**: **`experiment_id` ごとに** サブディレクトリを作成し、生成されたプロット、テーブル、レポート等を格納。`_targets.R` や Rmd 内で `sprintf("results/%s/plots/pca.png", experiment_id)` のように動的にパスを生成し、**最終的に `fs::path_abs()` を用いて絶対パスに変換することを推奨する。** サブディレクトリ (`plots/`, `tables/`, `reports/`) で整理することを推奨。
 *   **`logs/{experiment_id}/`**: **`experiment_id` ごとに** サブディレクトリを作成し、Rmd レンダリング時のログファイルなどを格納する。
@@ -76,12 +76,12 @@ your-project-root/
     - **出力先ディレクトリ:** `logs/{experiment_id}/`。このディレクトリは `_targets.R` の初期段階で `fs::dir_create()` を用いて確実に作成するターゲット (`ensure_log_dir` など) を設ける。
     - **ログファイル名:**
         - `_targets.R` 全体の実行ログ: `_targets.log` (例: `logs/ExpA/_targets.log`)
-        - Rmd モジュール (`Rmd/RMDxx_*.Rmd`): `RMDxx_*.log` (例: `logs/ExpA/RMD01_qc_report.log`)
-        - R 関数 (`R/Rxx_*.R`) 呼び出し時の専用ログ (必要な場合): `Rxx_*.log` (例: `logs/ExpA/R01_create_se.log`) - 基本的には `_targets.log` または呼び出し元 Rmd のログに出力する。
+        - Rmd モジュール (`Rmd/*.Rmd`): `{Rmdファイル名}.log` (例: `logs/ExpA/qc_report.log`)
+        - R 関数 (`R/*.R`) 呼び出し時の専用ログ (必要な場合): `{Rファイル名}.log` (例: `logs/ExpA/create_se.log`) - 基本的には `_targets.log` または呼び出し元 Rmd のログに出力する。
     - **ログレベル:** 基本は `INFO` レベルとする。`flog.threshold(INFO)`。デバッグ時には `DEBUG` レベルの出力も有効にする (`flog.threshold(DEBUG)`) ことを考慮する。
     - **ログフォーマット:** `[タイムスタンプ] [ログレベル] [呼び出し元識別子] メッセージ` を推奨。
         - `_targets.R` では、`flog.layout(layout.format('[%t] [%l] [_targets.R] %m'))` のように設定。
-        - Rmd や R 関数内では、ファイル名や関数名を識別子として設定する (例: `layout.format('[%t] [%l] [RMD01_qc_report] %m')`)。
+        - Rmd や R 関数内では、ファイル名や関数名を識別子として設定する (例: `layout.format('[%t] [%l] [qc_report] %m')`)。
     - **アペンダー:** 主に `appender.file()` を使用し、指定されたログファイルに出力する。コンソールにも同時に出力したい場合は `appender.tee()` を使用する。
 
 - **`_targets.R` におけるロギング:**
@@ -94,9 +94,9 @@ your-project-root/
     - **ファイルパス:** 原則として絶対パス (`fs::path_abs()`) を使用する。
     - **その他:** 必要に応じて `DEBUG` レベルで詳細な情報を記録する。
 
-- **Rmd モジュール (`Rmd/RMDxx_*.Rmd`) におけるロギング:**
+- **Rmd モジュール (`Rmd/*.Rmd`) におけるロギング:**
     - **必須:** Rmd ファイル冒頭のセットアップチャンク (`setup`) で、`futile.logger` を用いたロガーを設定する。
-        - **ロガー名:** Rmd ファイル名に基づいて設定 (例: `flog.logger("RMD01_qc_report")`)。
+        - **ロガー名:** Rmd ファイル名に基づいて設定 (例: `flog.logger("qc_report")`)。
         - **出力ファイル:** `logs/{experiment_id}/{Rmdファイル名}.log` を指定する。`params$exp_id` を利用してパスを組み立て、`fs::path_abs()` で絶対パスに変換する。
         - **レイアウト:** 上記推奨フォーマットに従い、識別子を Rmd ファイル名にする。
         - **閾値:** デフォルト `INFO`。
@@ -108,7 +108,7 @@ your-project-root/
     - `cli` でユーザー向けメッセージを出力するのは良いが、**実行記録としてのログは `futile.logger` で行うこと。**
     - 必要に応じて、計算の中間結果やデバッグに役立つ変数の値を `DEBUG` レベルで記録する。
 
-- **共通関数 (`R/Rxx_*.R`) におけるロギング:**
+- **共通関数 (`R/*.R`) におけるロギング:**
     - **推奨:** 関数が呼び出されたこと、主要な引数の値を `INFO` または `DEBUG` レベルで記録する。
     - **推奨:** 関数内の主要な処理分岐や、時間のかかる可能性のあるループ処理の開始/終了を記録する。
     - **推奨:** エラーハンドリング (`tryCatch` など) 内で、エラー発生時に詳細な情報を `ERROR` レベルで記録する。
@@ -138,14 +138,14 @@ your-project-root/
     - その他の入力ファイルやパラメータ (**`experiment_id` に基づいて `data/{experiment_id}/` 以下のパスが決定されることを明記**)。
 - **実行コマンド/処理:**
     - Rmd ファイルのレンダリング (`tar_render`) か、関数の実行か。
-    - **関連する Rmd ファイル名:** `RMDxx_*.Rmd` (Rmd の場合)
-    - **関連する R 関数ファイル名:** `Rxx_*.R` (関数の場合)
+    - **関連する Rmd ファイル名:** `*.Rmd` (Rmd の場合)
+    - **関連する R 関数ファイル名:** `*.R` (関数の場合)
     - 主要な処理ステップ、アルゴリズム、主要パッケージ/関数。
     - 使用する主要パラメータ (デフォルト値、ユーザー変更可否)。**Rmd の場合は `experiment_id` を `params` で渡すこと。**
     - **SE オブジェクトのメタデータ更新ロジック**。
-    - **ログ出力:** Rmd レンダリングの場合、**`logs/{experiment_id}/` ディレクトリ下にログファイルを出力する設定を含めることを推奨。** ファイル名は Rmd ファイル名に対応させる (例: `logs/{experiment_id}/RMD01_qc_report.log`)。
+    - **ログ出力:** Rmd レンダリングの場合、**`logs/{experiment_id}/` ディレクトリ下にログファイルを出力する設定を含めることを推奨。** ファイル名は Rmd ファイル名に対応させる (例: `logs/{experiment_id}/qc_report.log`)。
 - **必須ロギング要件:**
-    - 使用するロガー名 (例: `RMD01_qc_report`)。
+    - 使用するロガー名 (例: `qc_report`)。
     - 記録すべき主要な情報: 入力オブジェクト/ファイル、主要パラメータ、実行ステップの開始/終了、出力ファイルパス、SE メタデータ更新内容。
     - ログレベルの使い分け (INFO, DEBUG)。
 - **出力ターゲット:**
@@ -171,7 +171,7 @@ your-project-root/
 - **その他:** エラーハンドリング、特別な制約、**ロガー設定は呼び出し元 (`_targets.R` または Rmd セットアップチャンク) で行われる想定であること**など。
 
 ## 7. パイプライン構成 (`_targets.R`)
-- **モジュール実行順序:** `_targets.R` 内のターゲット間の依存関係で定義する。Rmd ファイル名のプレフィックス (`RMDxx_`) は可読性の補助として使用可。
+- **モジュール実行順序:** `_targets.R` 内のターゲット間の依存関係で定義する。ファイル名は可読性の補助として意味のある名前を使用する。
 - **パイプラインの柔軟性:** `_targets.R` を修正することで、モジュールの組み合わせ変更や条件分岐による実行制御を行う。**`experiment_id` を変更して再実行することで、異なる実験データに対して同じ解析フローを適用できる。**
 
 ## 8. 可視化とレポート
@@ -181,7 +181,7 @@ your-project-root/
   - 配色: `RColorBrewer`, `viridis`
 
 - **プロットの標準スタイル:**
-  - **テーマ:** `theme_classic()` をできるだけ使用する。必要に応じて独自のテーマ関数を作成し、一貫性を保つ。
+  - **テーマ:** `theme_classic()` をできるだけ使用する。必要に応じて独自のテーマ関数を作成し、一貫性を保つ。**プロットタイトルは中央寄せ (`theme(plot.title = element_text(hjust = 0.5))`) にする。**
   - **言語:** プロット内のラベル、タイトル、凡例等は**すべて英語**で記述する。**重要:** レポート本文は日本語でも構わないが、図表内のテキストは英語に統一する。
   - **ファイル形式:**
     - 基本: PNG形式 (`ggsave(..., width=7, height=5, dpi=300)`)

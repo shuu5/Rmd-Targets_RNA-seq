@@ -29,7 +29,7 @@
 ## 3. 主要な実行ステップ (R 関数)
 
 *   **実行形式:** R関数 (例: `create_se_object()`)
-*   **関連ファイル:** `R/R01_create_se.R` (仮称)
+*   **関連ファイル:** `R/create_se.R` (仮称)
 *   **ステップ詳細:**
     1.  **[セットアップ]**
         *   **必須:** `library()` で必要なパッケージをロード (`SummarizedExperiment`, `readr` or `data.table`, `dplyr`, `fs`, `futile.logger`, `cli`, `stringr`, `biomaRt`)。
