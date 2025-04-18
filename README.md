@@ -8,6 +8,10 @@ RNA-seq解析用のtargetsベースパイプライン
 
 This repository provides a pipeline framework for RNA-seq analysis using R Markdown and the targets package, enabling reproducible analysis workflows.
 
+### English Overview
+
+This RNA-seq analysis pipeline framework implements a reproducible workflow for gene expression analysis. It uses the R targets package to create a directed acyclic graph of dependencies, ensuring that only necessary steps are re-run when inputs change. Combined with R Markdown reports, it creates a fully documented and reproducible analysis environment.
+
 ## 機能 / Features
 
 - 再現性のある解析ワークフロー (Rの`targets`パッケージ使用)
