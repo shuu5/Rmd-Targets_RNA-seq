@@ -1,11 +1,11 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # Gitコミットメッセージルール
 
-- このルールを読み込んだら「project-global-ruleに従います！」と発言して。
+- このルールを読み込んだら「git-ruleに従います！」と発言して。
 - 全てのコミットメッセージは日本語で記述する。
 
 ## 1. 基本構成

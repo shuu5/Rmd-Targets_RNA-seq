@@ -1,2 +1,4 @@
 _targets/
 renv/
+results/
+data/
