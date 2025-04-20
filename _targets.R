@@ -4,8 +4,8 @@ library(yaml)
 library(fs)
 library(futile.logger)
 
-# 関数を読み込む
-source("R/create_se.R")
+# ユーティリティ関数の読み込み
+source("R/utility.R")
 
 # ターゲットオプションの設定:
 # targets::tar_option_set() は、{targets} で推奨される方法として、
@@ -26,10 +26,13 @@ if (is.null(experiment_id)) {
   stop("experiment_id が config.yaml に見つかりません")
 }
 
-# --- ロギング設定 (パス定義のみ、初期化はターゲット内で行う) ---
-# experiment_id が確定した後にログパスを設定
+# --- パス設定 ---
 log_dir_path <- fs::path_abs(sprintf("logs/%s", experiment_id))
 log_file_path <- fs::path(log_dir_path, "_targets.log")
+report_dir_path <- fs::path_abs(sprintf("results/%s/reports", experiment_id))
+# 将来的に必要になるかもしれない他の結果ディレクトリパスもここで定義可能
+# plot_dir_path <- fs::path_abs(sprintf("results/%s/plots", experiment_id))
+# table_dir_path <- fs::path_abs(sprintf("results/%s/tables", experiment_id))
 
 # --- データディレクトリ構造 ---
 # パイプラインは、入力データが 'data' ディレクトリ以下に、
@@ -56,132 +59,140 @@ biomart_attributes_cfg <- config$biomart_attributes %||% c("ensembl_gene_id", "e
 # デフォルト値のためのヘルパー演算子を定義
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
+# Rmd共通の出力フォーマット
+common_output_format <- "html_document"
+
+# Rmdモジュールの標準出力オプション設定
+rmd_output_options <- list( # 変数名を options に変更
+  toc = TRUE,
+  toc_float = TRUE,
+  code_folding = "hide",
+  keep_md = TRUE
+)
+
 # ターゲットリスト
 list(
-  # ターゲット 0: ログディレクトリを作成し、ロガーを設定
+  # ターゲット 0: 必要なディレクトリを作成し、ロガーを設定（常に実行）
   tar_target(
-    name = ensure_log_dir,
+    name = ensure_directories,
     command = {
+      # ログとレポートのディレクトリを作成
       fs::dir_create(log_dir_path)
+      fs::dir_create(report_dir_path)
+      # 必要であれば他のディレクトリも作成
+      # fs::dir_create(plot_dir_path)
+      # fs::dir_create(table_dir_path)
 
-      # --- ログファイルのローテーション ---
-      # 古いログファイルをリネーム
-      log_file_path_before <- fs::path(log_dir_path, "_targets_before.log")
+      # _targets.logファイルを初期化（パイプライン開始時に古いログを削除）
       if (fs::file_exists(log_file_path)) {
-        flog.info("既存のログファイル %s を %s に移動します", log_file_path, log_file_path_before)
-        fs::file_move(log_file_path, log_file_path_before)
-      } else {
-        flog.info("ログファイル %s が存在しないため、リネームをスキップします。", log_file_path)
+        fs::file_delete(log_file_path)
       }
 
-      # --- ロギング設定 (ディレクトリ作成とローテーション後に行う) ---
-      # appender.tee はファイルとコンソールに出力
-      # layout.format はログメッセージの形式を指定
-      # flog.threshold はログレベルを設定 (INFO以上を出力)
-      flog.appender(appender.tee(log_file_path))
+      # --- ロギング設定 (ディレクトリ作成後に行う) ---
+      # 注：ここではutility.Rのsetup_logger関数は使わず、_targets.R専用の設定を使う
+      # Rmdモジュール内ではsetup_logger関数を使用するが、_targets.Rでは専用の設定を維持
+      
+      # コンソールとファイルに出力するカスタムアペンダーを作成
+      # utility.R で定義した関数を使用
+      
+      # まず、ファイルハンドルを作成（削除済みなので新規作成モードで開く）
+      log_con <- file(log_file_path, open = "wt")
+      
+      # カスタムアペンダーで、コンソールとファイルの両方に出力
+      custom_appender <- function(line) {
+        # コンソールに出力
+        cat(line)
+        # ファイルに出力して同期
+        cat(line, file = log_con)
+        flush(log_con)
+      }
+      
+      # カスタムアペンダーを設定
+      flog.appender(custom_appender)
       flog.layout('[%t] [%l] [_targets.R] %m')
       flog.threshold(INFO)
-      flog.info("ログディレクトリを作成し、ロガーを初期化しました (experiment_id: %s)", experiment_id)
-      flog.info("ログファイルは %s に書き込まれます", log_file_path)
 
-      # このターゲットが生成するものを明示するためにパスを返す
-      return(log_dir_path)
+      flog.info("必要なディレクトリを作成し、ロガーを初期化しました (experiment_id: %s)", experiment_id)
+      flog.info("ログファイルは %s に書き込まれます", log_file_path)
+      flog.info("レポートディレクトリ: %s", report_dir_path)
+
+      # このターゲットが生成するものを明示するためにパスのリストを返す
+      return(list(log_dir = log_dir_path, report_dir = report_dir_path))
     },
-    cue = tar_cue(mode = "always")
+    cue = tar_cue(mode = "always") # パイプライン実行時に常にこのターゲットを実行
   ),
 
   # ターゲット 1: 初期の SummarizedExperiment オブジェクトを作成
-  # ensure_log_dir に依存
+  # ensure_directories に依存
   tar_target(
-    name = raw_se,
+    name = obj_se_raw,
     command = {
-      # ensure_log_dir が実行されるようにコマンド内で参照
-      log_dir_placeholder <- ensure_log_dir
-      flog.info("ターゲット開始: raw_se (ensure_log_dir に依存)")
-      se <- create_se_object(
-        experiment_id = experiment_id,
-        counts_file_path = sprintf(counts_file_path_tmpl, experiment_id),
-        metadata_file_path = sprintf(metadata_file_path_tmpl, experiment_id),
-        gene_id_column = gene_id_col,
-        sample_id_column = sample_id_col,
-        # config/デフォルトから biomaRt パラメータを追加
-        biomart_dataset = biomart_dataset_cfg,
-        biomart_host = biomart_host_cfg,
-        biomart_attributes = biomart_attributes_cfg
+      # ensure_directories が実行されるようにコマンド内で参照
+      dir_paths <- ensure_directories
+      flog.info("ターゲット開始: obj_se_raw (ensure_directories に依存)")
+
+      # 入力ファイルのパスを作成
+      counts_path <- fs::path_abs(sprintf(counts_file_path_tmpl, experiment_id))
+      metadata_path <- fs::path_abs(sprintf(metadata_file_path_tmpl, experiment_id))
+
+      flog.info("実験ID: %s のSEオブジェクト作成を開始します。", experiment_id)
+      flog.info("カウントファイルパス: %s", counts_path)
+      flog.info("メタデータファイルパス: %s", metadata_path)
+      flog.info("遺伝子ID列: %s", gene_id_col)
+      flog.info("サンプルID列: %s", sample_id_col)
+      flog.info("biomaRt ホスト: %s", biomart_host_cfg)
+      flog.info("biomaRt データセット: %s", biomart_dataset_cfg)
+      flog.info("biomaRt 属性: %s", paste(biomart_attributes_cfg, collapse=", "))
+
+      # 出力パスを構築 (ensure_directoriesからレポートディレクトリパスを使用)
+      output_path <- fs::path(dir_paths$report_dir, "create_se.html")
+
+      # ★ 変更点: render が使用する環境を保持
+      render_env <- new.env()
+
+      # Rmd をレンダリング（レポート生成のため）
+      rmarkdown::render(
+        input = fs::path_abs("Rmd/create_se.Rmd"),
+        output_file = output_path,
+        output_format = common_output_format, # 変数を使用
+        output_options = rmd_output_options, # オプションを別引数で渡す
+        params = list(
+          experiment_id = experiment_id,
+          counts_file_path = counts_path,
+          metadata_file_path = metadata_path,
+          gene_id_column = gene_id_col,
+          sample_id_column = sample_id_col,
+          biomart_host = biomart_host_cfg,
+          biomart_dataset = biomart_dataset_cfg,
+          biomart_attributes = biomart_attributes_cfg
+        ),
+        envir = render_env, # ★ 保持した環境を使用
+        quiet = TRUE, # 必要に応じてレンダリング出力を抑制
+        knit_root_dir = fs::path_abs(".") # ★ 追加: プロジェクトルートを基準に実行
       )
-      flog.info("ターゲット完了: raw_se")
-      return(se)
-    }
-  ),
 
-  # ターゲット 2: レポート出力ディレクトリが存在することを確認
-  # ensure_log_dir に依存
-  tar_target(
-    name = ensure_report_dir,
-    command = {
-      # ensure_log_dir が実行されるようにコマンド内で参照
-      log_dir_placeholder <- ensure_log_dir
-      flog.info("ターゲット開始: ensure_report_dir (ensure_log_dir に依存)")
-      dir_path <- sprintf("results/%s/reports", experiment_id)
-      fs::dir_create(dir_path)
-      # このターゲットが生成するものを明示するためにパスを返す
-      flog.info("レポートディレクトリを確認しました: %s", dir_path)
-      return(dir_path)
-    }
-  ),
+      flog.info("create_se.Rmd のレンダリング完了: %s", output_path)
 
-  # ターゲット 3 (旧ターゲット2): SE チェックレポートをレンダリング
-  # ensure_report_dir に明示的に依存 (間接的に ensure_log_dir にも依存)
-  tar_target(
-    name = report_check_se,
-    command = {
-      # ディレクトリターゲットが最初に実行されることを確認
-      dir_path_placeholder <- ensure_report_dir # 依存関係を確立
-      flog.info("ターゲット開始: report_check_se (ensure_report_dir に依存)")
-      # 相対出力パスを定義
-      relative_output_path <- sprintf("results/%s/reports/check_se.html", experiment_id)
-      # 絶対パスに変換
-      output_path <- fs::path_abs(relative_output_path)
-      output_dir <- dirname(output_path)
+      # ★ 変更点: render_env から SE オブジェクトを取得
+      # create_se.Rmd が 'se' という名前でオブジェクトを作成すると仮定
+      if (!exists("se", envir = render_env)) {
+         msg <- "create_se.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
+         flog.fatal(msg)
+         stop(msg)
+      }
+      se_object <- get("se", envir = render_env)
 
-      flog.debug("Rmd をレンダリング中: input=%s, output=%s, knit_root_dir=%s",
-                 fs::path_abs("Rmd/check_se.Rmd"), output_path, fs::path_abs("."))
-
-      # レンダリング直前に出力ディレクトリが存在することを確認
-      fs::dir_create(output_dir) # ここでも作成を試みる (ensure_report_dir が既に行っているはず)
-
-      flog.debug("dir_create 後の出力ディレクトリ存在確認: %s", fs::dir_exists(output_dir))
-
-      # レンダリング直前に再度存在を確認
-      if (!fs::dir_exists(output_dir)) {
-          flog.error("レンダリング直前に出力ディレクトリが存在しません: %s", output_dir)
-          stop("レンダリング直前に絶対ディレクトリが存在しません: ", output_dir)
+      # ★ デバッグログ追加: 取得したオブジェクトのクラス確認
+      flog.info("[_targets.R] render_env から取得したオブジェクト (se_object) のクラス: %s", paste(class(se_object), collapse=", "))
+      if (!inherits(se_object, "SummarizedExperiment")) {
+          msg <- sprintf("[_targets.R] 取得したオブジェクトは SummarizedExperiment ではありません。クラス: %s", paste(class(se_object), collapse=", "))
+          flog.error(msg)
+          # ここで stop せず、下の return で返すことで、report_check_se 側のログで再度確認できるようにする
+          # stop(msg)
       }
 
-      # 絶対パスを使用してドキュメントをレンダリング
-      render_result <- tryCatch({
-          rmarkdown::render(
-            input = fs::path_abs("Rmd/check_se.Rmd"), # 入力にも絶対パスを使用
-            output_file = output_path, # すでに絶対パス
-            params = list(
-              exp_id = experiment_id,
-              module_name = "check_se", 
-              input_se = "raw_se",
-              output_se = "raw_se"
-            ),
-            envir = parent.frame(), # Rmd 内の tar_load に重要
-            knit_root_dir = fs::path_abs(".") # 絶対 knit_root_dir を明示的に設定
-          )
-          flog.info("Rmd のレンダリングに成功しました: %s", output_path)
-          output_path # 成功したらパスを返す
-        }, error = function(e) {
-          flog.error("Rmd '%s' のレンダリングに失敗しました: %s", fs::path_abs("Rmd/check_se.Rmd"), e$message)
-          stop(e) # エラーを再スローしてターゲットを失敗させる
-        })
-      # 絶対出力ファイルパスを返す
-      return(render_result)
-    },
-    # このターゲットがファイルを生成することを示す
-    format = "file"
+      flog.info("ターゲット完了: obj_se_raw (SummarizedExperiment オブジェクトを返します)")
+      return(se_object) # ★ 変更点: SE オブジェクトを返す
+    }
   )
 )

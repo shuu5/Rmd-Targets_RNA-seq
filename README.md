@@ -63,15 +63,9 @@ data/
 
 ```bash
 ./targets_command.sh make  # 全パイプラインを実行
-./targets_command.sh vis   # パイプライン構造を可視化
+./targets_command.sh vis targets_only=TRUE   # パイプライン構造を可視化
 ```
-
-Rから実行:
-
-```r
-targets::tar_make()  # 全パイプラインを実行
-targets::tar_visnetwork()  # パイプライン構造を可視化
-```
+利用可能なコマンドやオプションの詳細は `./targets_command.sh help` で確認できます。
 
 ## パイプラインの構造 / Pipeline Structure
 

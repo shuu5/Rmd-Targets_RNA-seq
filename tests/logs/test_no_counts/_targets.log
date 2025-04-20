@@ -1,0 +1,16 @@
+[2025-04-20 19:05:32] [6] [create_se] --- create_se のロガー設定完了 (PID: 91486) ---
+[2025-04-20 19:05:32] [6] [create_se] モジュールログファイルパス: tests/logs/test_no_counts/create_se.log
+[2025-04-20 19:05:32] [6] [create_se] ログレベル: TRACE
+[2025-04-20 19:05:32] [6] [create_se] --- create_se.Rmd の実行開始 ---
+[2025-04-20 19:05:32] [6] [create_se] 実験ID: test_no_counts
+[2025-04-20 19:05:32] [6] [create_se] 入力パラメータ:
+[2025-04-20 19:05:32] [9] [create_se] - experiment_id: test_no_counts
+[2025-04-20 19:05:32] [9] [create_se] - counts_file_path: path/to/nonexistent/file.csv
+[2025-04-20 19:05:32] [9] [create_se] - metadata_file_path: /home/rstudio/projects/Rmd_targets_RNA-seq/tests/testdata/metadata_test.csv
+[2025-04-20 19:05:32] [9] [create_se] - gene_id_column: gene_id
+[2025-04-20 19:05:32] [9] [create_se] - sample_id_column: sample_id
+[2025-04-20 19:05:32] [9] [create_se] - biomart_host: https://ensembl.org
+[2025-04-20 19:05:32] [9] [create_se] - biomart_dataset: hsapiens_gene_ensembl
+[2025-04-20 19:05:32] [9] [create_se] - biomart_attributes: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
+[2025-04-20 19:05:32] [6] [create_se] --- 入力ファイルの存在確認開始 ---
+[2025-04-20 19:05:32] [2] [create_se] カウントファイルが見つかりません: path/to/nonexistent/file.csv

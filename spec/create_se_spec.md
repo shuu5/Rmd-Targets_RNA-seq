@@ -1,138 +1,174 @@
-# SEオブジェクト作成 仕様書 (raw_se)
+# create_se モジュール仕様書
 
-*この仕様書は **`rmd-targets_rule.mdc` (ルール文書)** に基づき作成されています。実装前に必ずルールを確認してください。*
+## ターゲット情報
 
-## 1. モジュールの概要
+### ターゲット名
+`obj_se_raw`
 
-*   **モジュール名:** SEオブジェクト作成
-*   **対応するターゲット名 (`_targets.R`):** `raw_se`
-*   **目的:** 指定された `experiment_id` に基づき、カウントデータとサンプルメタデータを読み込み、基本的な `SummarizedExperiment` (SE) オブジェクトを生成する。
-*   **担当者:** (任意)
-*   **作成日:** (作成時に記述)
-*   **更新日:** (更新時に記述)
-*   **TDD適用:** 非推奨 (主にファイル読み込みとオブジェクト生成のため)
+### 目的
+このモジュールは、RNA-seq解析パイプラインの開始点として、指定されたカウントデータファイルとサンプルメタデータファイルから基本的な`SummarizedExperiment` (SE) オブジェクトを作成します。また、`biomaRt`を使用して遺伝子アノテーション情報を取得し、SEオブジェクトに付加します。
 
-## 2. 依存関係 (`targets`) と入力データ
+### 入力ターゲット
+- **依存ターゲット名**: なし (パイプラインの最初のモジュール)
+- **SE オブジェクトの期待状態**: なし
+- **その他の入力ファイル**:
+  - `params$counts_file_path`: カウントデータファイルへのパス（CSV形式を想定、遺伝子ID列とサンプル列を含む）。`_targets.R`で`experiment_id`に基づいて決定される想定。
+  - `params$metadata_file_path`: サンプルメタデータファイルへのパス（CSV形式を想定、サンプルID列を含む）。`_targets.R`で`experiment_id`に基づいて決定される想定。
 
-*   **依存するターゲット名:**
-    *   (オプション) `ensure_log_dir`: ログディレクトリが存在することを保証する場合 (関数自体は直接ファイルにログ出力しないが、呼び出し元がログ出力する場合に依存)。
-*   **入力 `SummarizedExperiment` オブジェクトの状態:** なし (パイプラインの開始点)
-*   **その他の入力ファイル/パラメータ:**
-    *   **カウントデータ:** `data/{experiment_id}/counts.csv` (ファイル形式は `config.yaml` 等で指定可能にするのが望ましい)
-        *   形式: 最初の列が遺伝子ID (例: `gene_id_column` パラメータで指定)、後続の列がサンプルIDに対応するカウント値。
-    *   **サンプルメタデータ:** `data/{experiment_id}/sample_metadata.csv`
-        *   形式: 最初の列がサンプルID (例: `sample_id_column` パラメータで指定、カウントデータの列名と一致)、後続の列が実験条件などのメタデータ。
-    *   **ファイルパス:**
-        *   パスのテンプレート (例: `counts_file_path`) は `_targets.R` で `experiment_id` を使って具体化される。
-        *   **必須:** 入力ファイルパス (絶対パス) と `experiment_id` をログ (`flog.info`) に記録。
+### 実行コマンド/処理
+- **関連する Rmd ファイル名**: `Rmd/create_se.Rmd`
+- **主要な処理ステップ**:
+  1. 入力ファイル（カウントデータ、メタデータ）の存在確認と読み込み (`readr::read_csv`)。
+  2. データの整合性チェック（必須列の存在、サンプルIDの一致確認）。
+  3. メタデータのサンプル順序をカウントデータの列順序に合わせる。
+  4. カウントデータから遺伝子IDを抽出し、バージョン情報を削除 (`stringr::str_replace`)。
+  5. `biomaRt`に接続し、指定された遺伝子ID (`params$biomart_dataset`, `params$biomart_attributes`) のアノテーション情報を取得 (`biomaRt::useMart`, `biomaRt::getBM`)。
+  6. 取得したアノテーション情報を前処理し、元の遺伝子IDにマッピング (`dplyr::left_join`)、`rowData`用の`DataFrame`を作成 (`S4Vectors::DataFrame`)。
+  7. `SummarizedExperiment`オブジェクトを作成 (`SummarizedExperiment::SummarizedExperiment`)。
+  8. SEオブジェクトのメタデータに実験ID (`params$experiment_id`) とパイプライン実行履歴を記録 (`record_pipeline_history`ユーティリティ関数)。
+  9. SEオブジェクトの基本情報と内容を表示。
+  10. 遺伝子タイプ (gene_biotype) の分布を集計・可視化。
+  11. protein_coding遺伝子の詳細分析を実施。
+  12. サンプルごとのprotein_coding遺伝子のライブラリサイズをbar plotで比較。
+  13. サンプル間の発現量分布をdensity plotで比較し、データの品質とばらつきを視覚的に評価。
+  14. セッション情報の表示。
+- **主要なパッケージ/関数**:
+  - `SummarizedExperiment`, `S4Vectors`
+  - `readr`, `dplyr`, `stringr`, `tibble`
+  - `fs`, `here`
+  - `futile.logger`, `cli`
+  - `biomaRt`
+  - `knitr`, `DT`, `ggplot2` (レポート表示・可視化用)
+  - `R/utility.R` 内の関数 (`setup_logger`, `record_pipeline_history`)
+- **主要パラメータ**:
+  - `params$experiment_id`: 実験ID (必須、レポートタイトル、ログファイルパス、メタデータ記録に使用)
+  - `params$counts_file_path`: カウントデータファイルパス (必須)
+  - `params$metadata_file_path`: メタデータファイルパス (必須)
+  - `params$gene_id_column`: カウントデータ内の遺伝子ID列名 (デフォルト: "gene_id")
+  - `params$sample_id_column`: メタデータ内のサンプルID列名 (デフォルト: "sample_id")
+  - `params$biomart_host`: biomaRtホストURL (デフォルト: "https://ensembl.org")
+  - `params$biomart_dataset`: biomaRtデータセット名 (必須)
+  - `params$biomart_attributes`: biomaRtで取得する属性リスト (デフォルトは "ensembl_gene_id", "external_gene_name", "transcript_length", "gene_biotype")
+  - `params$module_name`: モジュール名（"create_se"、ログと履歴記録に使用）
+- **SE オブジェクトのメタデータ更新**:
+  - `metadata(se)$experiment_id`: `params$experiment_id` を記録。
+  - `metadata(se)$pipeline_history[['create_se']]` に以下の情報を記録 (`record_pipeline_history`経由):
+    - `module_name`: "create_se"
+    - `description`: "SummarizedExperiment オブジェクト作成"
+    - `execution_time`: 実行日時
+    - `parameters`: 上記の主要パラメータのリスト
 
-## 3. 主要な実行ステップ (R 関数)
+### 必須ロギング要件
+- **ロガー名**: `create_se`
+- **ログファイル**: `logs/{experiment_id}/create_se.log`
+- **ログ設定**:
+  - セットアップチャンクで`setup_logger`関数を用いてロガー設定（`include=FALSE`）。
+  - `futile.logger`パッケージを使用。
+  - ログはファイルにのみ出力し、レンダリング出力には表示しない。
+- **ログレベル**:
+  - `TRACE`: パラメータ詳細、データの一部（head）、デバッグ中の変数内容。
+  - `DEBUG`: ファイルパス確認、データ読み込み/操作のステップ、列名変更、biomaRt接続、DataFrame変換など。
+  - `INFO`: モジュール/処理ブロックの開始/終了、読み込んだデータの次元、サンプルID一致状況、biomaRt取得レコード数、SEオブジェクト作成成功、メタデータ記録完了。
+  - `WARN`: サンプルID不一致、biomaRtアノテーションのNA値。
+  - `ERROR`: ファイルが見つからない、ファイルの読み込み失敗、必須列の欠損、biomaRt接続/取得エラー、SEオブジェクト作成失敗。
+- **記録すべき主要情報**:
+  - 実行開始/終了、PID
+  - 入力パラメータ値
+  - 入力ファイルの存在確認結果とパス
+  - 読み込んだカウントデータとメタデータの次元
+  - カウントデータとメタデータのサンプルIDの一致/不一致状況
+  - biomaRt接続先、クエリに使用する遺伝子ID数、取得したアノテーションのレコード数と列名
+  - rowDataのマッピングと作成結果、NA値の存在状況
+  - 作成されたSEオブジェクトの次元、assay/colData/rowDataの列名
+  - メタデータへの履歴記録の実行
 
-*   **実行形式:** R関数 (例: `create_se_object()`)
-*   **関連ファイル:** `R/create_se.R` (仮称)
-*   **ステップ詳細:**
-    1.  **[セットアップ]**
-        *   **必須:** `library()` で必要なパッケージをロード (`SummarizedExperiment`, `readr` or `data.table`, `dplyr`, `fs`, `futile.logger`, `cli`, `stringr`, `biomaRt`)。
-        *   **ログ:** この関数自体はロガー設定 (アペンダー、レイアウト) を**行わない**。呼び出し元 (`_targets.R`) で設定されたルートロガーを使用 (`flog.info()`, `flog.error()` など)。
-        *   **推奨:** `cli_process_start()` で処理開始メッセージ表示。
-        *   **必須:** 入力ファイルパス (絶対パス) と `experiment_id` をログ (`flog.info`) に記録。
-        *   **必須:** `fs::file_exists()` で入力ファイルの存在確認。存在しない場合は `flog.error()` でエラーログを出力し、`stop()` で処理を中断。
-    2.  **[データ読み込み]**
-        *   絶対パスを使用してカウントデータとサンプルメタデータを読み込む (`readr::read_csv`, `data.table::fread` など)。
-        *   **必須:** カウントデータの最初の列（遺伝子ID）を `rownames` として読み込むことを確認。
-        *   読み込み時のエラーハンドリング (`tryCatch` など)。エラー発生時は `flog.error()` で記録し、`stop()`。
-    3.  **[データ整合性チェック]**
-        *   カウントデータの列名 (サンプルID) とメタデータのサンプルID (`colData` の行名になる) の完全一致、または部分一致と順序整合性を確認。不一致の場合は `flog.error()` でエラーを記録し、`stop()`。
-        *   必要に応じて他のチェック (例: 重複サンプルID、必須メタデータ列の存在)。
-    4.  **[遺伝子アノテーション取得 (`biomaRt`)]**
-        *   **必須:** カウントデータの `rownames` (バージョン付き ENSEMBL ID) を取得。
-        *   **必須:** バージョンなしの ENSEMBL ID を作成 (`stringr::str_remove` などを使用)。`flog.info` で変換前後の ID の数を記録。
-        *   **必須:** `biomaRt::useMart` で Ensembl マートオブジェクトを作成。使用するホスト (`biomart_host`)、データセット (`biomart_dataset`) はパラメータ化する。
-        *   **必須:** `biomaRt::getBM` を使用し、バージョンなし ENSEMBL ID (`ensembl_gene_id`) をキー (`filters`) として、必要な属性 (`attributes`: `ensembl_gene_id`, `external_gene_name` or `hgnc_symbol`, `transcript_length`, `gene_biotype`) を取得。
-        *   **必須:** 取得したアノテーション情報を `rowData` の基礎となる `DataFrame` に整形する。
-        *   **ログ:** `biomaRt` への接続試行、取得した属性の数、マッチした/しなかった遺伝子の数を `flog.info` で記録。エラー発生時は `flog.error` で記録し、適切に処理 (例: アノテーションなしで続行するか `stop`)。
-    5.  **[`SummarizedExperiment` オブジェクト生成]**
-        *   **必須:** カウントデータの `rownames` (バージョン付き ENSEMBL ID) が、ステップ 4 で作成したアノテーション `DataFrame` の遺伝子 ID と一致するように整合性を確認し、必要に応じて並べ替え/フィルタリングを行う。
-        *   `SummarizedExperiment::SummarizedExperiment()` を使用。
-        *   `assays = list(counts = count_matrix)`: カウントデータを `counts` アッセイとして格納。
-        *   `colData = sample_metadata`: サンプルメタデータを格納 (サンプルIDが行名になるように整形)。
-        *   `rowData = annotation_df`: ステップ 4 で取得・整形したアノテーション情報を含む `DataFrame` を格納。**`rownames(rowData)` は `rownames(assays$counts)` (バージョン付き ENSEMBL ID) と一致させる。** `rowData` には `ensemble_gene_id` (バージョンなし), `gene_name`, `gene_length`, `gene_biotype` 列が含まれる。
-    6.  **[メタデータ初期化]**
-        *   **必須:** `metadata(se)$experiment_id <- experiment_id`
-        *   **必須:** `metadata(se)$pipeline_history <- list()` (空のリストとして初期化)
-        *   `flog.info("Initialized SE metadata with experiment_id and empty pipeline_history.")`
-    7.  **[完了ステップ]**
-        *   **必須:** 生成された SE オブジェクトを返す (ターゲットとして保存される)。
-        *   **推奨:** `cli_process_done()` で完了メッセージ表示。
+## 出力情報
 
-## 4. 出力 (`targets`)
+### 出力ターゲット
+- **生成されるオブジェクト名**: `obj_se_raw`
+- **出力される SE オブジェクトの期待状態**:
+  - **assays**: `counts` (数値マトリックス、行名はバージョン付き遺伝子ID、列名はサンプルID)
+  - **colData**: `DataFrame` (行名はサンプルID)。`params$metadata_file_path` から読み込まれた情報を含み、列順序は `assays$counts` の列順序と一致。`params$sample_id_column` を含む。
+  - **rowData**: `DataFrame` (行名はバージョン付き遺伝子ID)。`biomaRt`から取得された遺伝子アノテーション情報を含む。最低限 `ensembl_gene_id` (バージョンなし) を含み、`params$biomart_attributes` で指定された他の属性 (例: `gene_name`、`gene_length`、`gene_biotype`) も含む。
+  - **metadata**:
+    - `experiment_id`: `params$experiment_id` の値。
+    - `pipeline_history`: `create_se` の実行履歴を含むリスト。
 
-*   **出力ターゲット名:** `raw_se`
-*   **出力 `SummarizedExperiment` オブジェクトの状態 (ターゲット名: `raw_se`):**
-    *   **`assays`:**
-        *   `counts`: 入力された生カウントデータ (matrix or dgCMatrix)。行名はバージョン付き ENSEMBL ID。
-    *   **`colData`:**
-        *   入力されたサンプルメタデータを含む DataFrame。行名はサンプルID。
-    *   **`rowData`:**
-        *   `biomaRt` から取得したアノテーション情報を含む DataFrame。
-        *   **行名 (`rownames`):** バージョン付き ENSEMBL ID (`assays$counts` の行名と一致)。
-        *   **必須列:**
-            *   `ensemble_gene_id`: バージョンなし ENSEMBL ID。
-            *   `gene_name`: 遺伝子シンボル (例: HGNC symbol)。列名は `biomaRt` の結果に依存 (例: `external_gene_name`, `hgnc_symbol`)。
-            *   `gene_length`: 遺伝子長 (例: `transcript_length`)。列名は `biomaRt` の結果に依存。
-            *   `gene_biotype`: 遺伝子の生物学的タイプ。
-    *   **`metadata`:**
-        *   `experiment_id`: このSEオブジェクトが由来する実験ID (**必須**)。
-        *   `pipeline_history`: 空のリスト (**必須**)。
-*   **生成されるファイル:** なし (SEオブジェクトは `targets` のストアに保存)。
+### 生成ファイル
+- **プロット**:
+  - 遺伝子タイプ (gene_biotype) の分布を示すバープロット
+  - サンプルごとのprotein_coding遺伝子のライブラリサイズを比較するバープロット
+  - サンプル間の発現量分布を比較するdensity plot (log2スケール)
+- **テーブル**:
+  - カウントデータの基本情報
+  - サンプルメタデータの基本情報
+  - 作成されたSEオブジェクトの概要
+  - 遺伝子タイプの分布テーブル
+  - protein_coding遺伝子の統計情報
+  - サンプルごとのprotein_coding遺伝子のライブラリサイズ
+  - protein_coding遺伝子のライブラリサイズの統計情報
+- **レポート**:
+  - `results/{experiment_id}/reports/create_se.html` (HTMLレポート)
+  - `results/{experiment_id}/reports/create_se.md` (Markdownレポート、HTMLと共に生成)
+  - **出力形式**: `_targets.R`で定義された共通出力設定が適用される想定。
 
-## 5. 使用する主要パッケージと共通関数
+## レポート要件
+- **出力形式**:
+  - `knitr::opts_chunk$set` で以下のオプションを設定: `echo = FALSE`, `warning = FALSE`, `message = FALSE`, `fig.width = 10`, `fig.height = 6`, `dpi = 300`
+  - 処理チャンクは基本的に `include=FALSE` に設定し、レポートには結果のみを表示
+- **含めるべき図表**:
+  - 遺伝子タイプ (gene_biotype) の分布バープロット
+  - サンプルごとのprotein_coding遺伝子のライブラリサイズ比較バープロット
+  - サンプル間の発現量分布を比較するdensity plot (生データおよびlog2変換データ)
+  - DT::datatableによるインタラクティブテーブル表示
+    - カウントデータの最初の10行
+    - サンプルメタデータの最初の10行
+    - assay("counts")の最初の10行
+    - colData全体
+    - rowDataの最初の20行
+- **含めるべき統計情報**:
+  - 入力カウントデータとメタデータの基本情報（次元、ID列名など）
+  - 作成されたSEオブジェクトの概要（次元、assay/colData/rowData列名、メタデータ項目）
+  - 遺伝子タイプの分布統計
+  - protein_coding遺伝子の統計（数、割合、アノテーション欠損状況）
+  - サンプルごとのライブラリサイズと統計情報
+  - 発現量分布の統計的比較（分布の中央値、四分位範囲など）
+- **テキスト概要**:
+  - モジュールの目的と処理概要の説明。
+  - 入力ファイルのパス。
+  - 実行した処理の各ステップの説明。
+  - サンプル間の発現量分布比較の解釈と品質評価。
+  - `sessionInfo()` による再現性のための情報。
 
-*   **パッケージ:** `targets`, `SummarizedExperiment`, `readr` (または `data.table`), `dplyr`, `fs`, `futile.logger`, `cli`, `stringr`, `biomaRt`
-    *   *`renv` 管理対象 (`renv::snapshot()` を適宜実行)。R スクリプト冒頭で `library()` 宣言が必須。*
-*   **共通関数 (`R/` ディレクトリ):**
-    *   現時点ではなし。将来的に共通のファイル読み込み/検証関数、ロガー設定関数などを使用する可能性あり。
+## テスト要件
+- **テストファイル**: `tests/test-create_se.R` (想定)
+- **テスト方法**: `testrmd`パッケージを使用 (推奨)
+- **テスト内容**:
+  - 正常な入力に対するSEオブジェクト作成の成功確認。
+  - 出力SEオブジェクトの構造検証 (`assays`, `colData`, `rowData` の存在と次元、期待される列名)。
+  - `colData`と`assays`のサンプル順序の一致確認。
+  - `rowData`と`assays`の遺伝子順序の一致確認。
+  - `metadata` (`experiment_id`, `pipeline_history`) が正しく記録されているかの検証。
+  - 不正な入力（ファイル欠損、列名不一致、サンプルID不一致）に対するエラーハンドリングのテスト。
+  - biomaRt接続失敗時のエラーハンドリングテスト。
+- **テスト実装手順**:
+  1. Red: 失敗するテストコード (`testrmd::test_rmd`) を記述。
+  2. Green: テストをパスする最小限のコードを `Rmd/create_se.Rmd` に実装。
+  3. Refactor: コードを最適化。
 
-## 6. パラメータ (`_targets.R` または `config.yaml` 経由)
-
-*   *原則として `_targets.R` 上部または `config.yaml` で定義し、関数には引数として渡されることを想定。*
-| パラメータ名           | 説明                                                         | 型        | デフォルト値/推奨値                     | 必須 | 提供元 (例)        |
-| :--------------------- | :----------------------------------------------------------- | :-------- | :--------------------------------------- | :--- | :----------------- |
-| `experiment_id`        | 解析対象の実験 ID                                            | character | -                                        | Yes  | `_targets.R`       |
-| `counts_file_path`     | カウントデータの**絶対パス** (呼び出し元で生成)                 | character | -                                        | Yes  | `_targets.R` (動的) |
-| `metadata_file_path`   | サンプルメタデータの**絶対パス** (呼び出し元で生成)           | character | -                                        | Yes  | `_targets.R` (動的) |
-| `gene_id_column`       | カウントファイル内の遺伝子ID列名 (rownamesとして使用)          | character | `1` (最初の列)                         | No   | `config.yaml`      |
-| `sample_id_column`     | メタデータファイル内のサンプルID列名                         | character | `"sample_id"`                            | No   | `config.yaml`      |
-| `counts_file_format`   | カウントファイルの形式 (例: "csv", "tsv", "rds")               | character | `"csv"`                                  | No   | `config.yaml`      |
-| `metadata_file_format` | メタデータファイルの形式 (例: "csv", "tsv")                 | character | `"csv"`                                  | No   | `config.yaml`      |
-| `biomart_host`         | `biomaRt` で使用するホスト URL                               | character | `"https://ensembl.org"` (またはミラーサイト) | No   | `config.yaml`      |
-| `biomart_dataset`      | `biomaRt` で使用するデータセット名 (例: "hsapiens_gene_ensembl") | character | - (種に応じて設定)                     | Yes  | `config.yaml`      |
-| `biomart_attributes`   | `biomaRt` で取得する属性リスト                              | character vector | `c("ensembl_gene_id", "external_gene_name", "transcript_length", "gene_biotype")` | No | `config.yaml` |
-* *注: パスパラメータ (`counts_file_path`, `metadata_file_path`) は、テンプレート文字列ではなく、`_targets.R` 内で `sprintf()` や `glue()` を使って `experiment_id` を埋め込み、`fs::path_abs()` で絶対パスに変換したものが渡される想定。*
-* *注: `biomart_dataset` は解析対象の種に応じて適切に設定する必要があるため、必須パラメータとする。*
-
-## 7. ログとメッセージ出力 (`futile.logger`, `cli`)
-
-*   **ルール:** ルール文書の **セクション 3 (コーディング規約: ロギング)** に従うこと。
-*   **ロガー設定:** **この関数内では行わない。** 呼び出し元 (`_targets.R`) で `futile.logger` のルートロガーが設定されていることを前提とする (例: `flog.appender(appender.tee(logfile))`, `flog.layout(...)`, `flog.threshold(INFO)`)。ログは `logs/{experiment_id}/_targets.log` に出力される想定。
-*   **ログ記録 (`flog.info`, `flog.warn`, `flog.error`):**
-    *   **必須:** 関数の開始/終了、入力ファイルパス、`experiment_id`、主要なチェックポイント (ファイル存在確認、整合性チェック)、**`biomaRt` への接続試行、使用データセット、取得属性、取得結果の概要 (成功/失敗、マッチ数など)**、エラー発生時の詳細情報 (`flog.error`)、SE オブジェクト生成完了、メタデータ初期化完了。
-    *   **ログレベル:** 通常の情報は `INFO`、デバッグ用の詳細情報は `DEBUG` (呼び出し元で閾値設定)、エラーは `ERROR`。
-*   **ユーザーメッセージ (`cli`):**
-    *   `cli_process_start`/`cli_process_done` や `cli_alert_info`, `cli_alert_danger` などを使用し、主要なステップの開始/終了、成功/失敗をユーザーに分かりやすく表示。**特に `biomaRt` によるアノテーション取得の進捗や結果の概要を表示することが望ましい。**
-
-## 8. 出力パスと命名規則
-
-*   **SEオブジェクト:** `targets` のストア (`_targets/objects/raw_se`) に自動保存される。パスの直接操作はしない。
-*   **その他:** なし
-
-## 9. 可視化要件
-
-*   なし
-
-## 10. その他特記事項・制約条件
-
-*   入力ファイルの具体的なフォーマット (区切り文字、ヘッダー有無、コメント文字など) は、読み込み関数 (例: `readr::read_csv`) の引数で調整可能である必要がある。`config.yaml` などで指定できるようにするのが望ましい。
-*   現時点では遺伝子アノテーション (`rowData`) の詳細な付与は行わない (遺伝子IDのみ)。後続モジュールで実施。
-*   大規模データの場合、`data.table::fread` の使用やメモリ効率の良いデータ構造 (例: `DelayedArray`, `HDF5Array`) の利用を将来的に検討する必要があるかもしれない。
-*   `biomaRt` への接続は外部ネットワークに依存するため、タイムアウトやサーバーエラーが発生する可能性がある。適切なエラーハンドリング (`tryCatch` や再試行ロジック) を実装することが重要。オフライン環境での実行が必要な場合は、事前にアノテーションファイルをダウンロードしておくなどの代替策が必要になる。 
+## その他
+- **エラーハンドリング**:
+  - 入力ファイルの欠損、読み込みエラー、必須列の欠損、サンプルIDの不一致（`stop()`または`flog.error()`で処理）。
+  - biomaRt接続・取得エラー (`tryCatch()`を使用し、エラー時は`stop()`または`flog.error()`で処理)。
+  - SEオブジェクト作成時のエラー (`tryCatch()`を使用し、エラー時は詳細なログを出力して`stop()`で処理)。
+  - アノテーションデータのNA値に対する警告と処理の継続。
+- **特別な制約**:
+  - インターネット接続が必要 (`biomaRt`を使用するため)。
+  - `R/utility.R` 内の関数 (`setup_logger`, `record_pipeline_history`) に依存。
+- **注意事項**:
+  - `_targets.R` でファイルパス (`counts_file_path`, `metadata_file_path`) や `biomart_dataset` が適切に設定されている必要がある。
+  - コード内のコメントは日本語で記述されている。
+  - `sessionInfo()` はレポートの最後に含まれる。
+  - 複数のデータ整合性チェックと警告が実装されている（サンプルID不一致、アノテーションのNA値など）。
+  - protein_coding遺伝子の分析は条件に応じて実行され、gene_biotypeが存在しない場合は適切なメッセージが表示される。
+  - サンプル間の発現量分布比較は、データ品質評価の重要な指標となり、バッチ効果の初期判定にも役立つ。 

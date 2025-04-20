@@ -33,6 +33,8 @@ message("Output file: ", output_png_file)
 message("Arguments for tar_visnetwork: ", visnetwork_args_str)
 
 # 必要なパッケージをロード
+# rmd_rule.mdc ルール 6 に従い、必要なライブラリを明示的に読み込む
+# suppressPackageStartupMessages で読み込み時のメッセージを抑制
 suppressPackageStartupMessages({
   library(targets)
   library(visNetwork)
@@ -75,6 +77,27 @@ b <- tryCatch({
 })
 message("ChromoteSession initialized.")
 
+# --- 追加: on.exit による確実なクリーンアップ ---
+# セッションが正常に作成されたら、関数の終了時に必ず close するように登録
+if (!is.null(b) && b$is_active()) {
+    on.exit( {
+        message("Ensuring ChromoteSession is closed via on.exit()...")
+        # on.exit が呼ばれる時点でもう一度アクティブか確認するのがより安全
+        if (!is.null(b) && b$is_active()) {
+            tryCatch({ # close 自体でエラーが起きる可能性も考慮
+                b$close()
+                message("ChromoteSession closed successfully via on.exit().")
+            }, error = function(close_e) {
+                message("Error closing ChromoteSession during on.exit(): ", close_e$message)
+            })
+        } else {
+            message("ChromoteSession was already inactive or null upon on.exit().")
+        }
+    }, add = TRUE)
+    message("Registered ChromoteSession cleanup via on.exit().")
+}
+# --- ここまで ---
+
 # セッションがアクティブか確認
 if (!b$is_active()) {
     message("Error: ChromoteSession is not active.")
@@ -86,18 +109,18 @@ tryCatch({
   message("Navigating to HTML file: ", paste0("file://", html_file))
   # ページナビゲーションと読み込み完了待ち
   b$Page$navigate(paste0("file://", html_file), wait_ = FALSE)
-  message("Waiting for page load event (timeout 60s)...") # タイムアウトを延長
-  load_event <- b$Page$loadEventFired(wait_ = TRUE, timeout = 60) # タイムアウトを60秒に設定
+  message("Waiting for page load event (timeout 120s)...") # タイムアウトを延長
+  load_event <- b$Page$loadEventFired(wait_ = TRUE, timeout = 120) # タイムアウトを120秒に設定
 
   if (is.null(load_event)) {
-      message("Error: Page load timed out after 60 seconds.")
+      message("Error: Page load timed out after 120 seconds.")
       b$close()
       quit(status = 1)
   }
   message("Page loaded successfully.")
 
   # 少し待機時間を設ける (レンダリングのため)
-  Sys.sleep(2) # 2秒待機
+  Sys.sleep(5) # 5秒待機
 
   message("Taking screenshot and saving to: ", output_png_file)
   # スクリーンショットを撮る (セレクターを明示的に指定)
@@ -116,15 +139,20 @@ tryCatch({
   message("Error during screenshot process: ", e$message)
   # webshot (PhantomJS) fallback を試す場合はここにコードを追加
   # 現状では Chromote でのエラーはスクリプト失敗とする
-  if (!is.null(b) && b$is_active()) {
-      b$close()
-  }
+  # on.exit がクリーンアップを行うため、ここでの close 処理は不要
+  # if (!is.null(b) && b$is_active()) {
+  #     b$close()
+  # }
   quit(status = 1)
 })
 
+# --- 削除: on.exit に処理を移譲 ---
 # ChromoteSession を閉じる
-message("Closing ChromoteSession...")
-b$close()
+# message("Closing ChromoteSession...")
+# if (!is.null(b) && b$is_active()) { # on.exitで処理されるため不要
+#   b$close()
+# }
+# --- ここまで ---
 
 # 一時 HTML ファイルを削除 (任意)
 # unlink(html_file) # デバッグ中は残しておくと便利
