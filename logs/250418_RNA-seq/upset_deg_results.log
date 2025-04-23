@@ -1,0 +1,10 @@
+[2025-04-23 18:50:09] [6] [upset_deg_results] --- セットアップ：R Markdownドキュメントを実行開始 ---
+[2025-04-23 18:50:09] [6] [upset_deg_results] パラメータ情報: experiment_id = 250418_RNA-seq
+[2025-04-23 18:50:09] [8] [upset_deg_results] 出力ディレクトリ: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/reports
+[2025-04-23 18:50:09] [8] [upset_deg_results] プロットディレクトリ: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/plots/upset_deg_results
+[2025-04-23 18:50:09] [8] [upset_deg_results] テーブルディレクトリ: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/tables/upset_deg_results
+[2025-04-23 18:50:09] [8] [upset_deg_results] グループ名: tab3
+[2025-04-23 18:50:09] [8] [upset_deg_results] 遺伝子名カラム: gene_name
+[2025-04-23 18:50:09] [6] [upset_deg_results] セットアップ完了
+[2025-04-23 18:50:09] [6] [upset_deg_results] --- 入力データの確認開始 ---
+[2025-04-23 18:50:09] [2] [upset_deg_results] ディレクトリが存在しません: hct116_tab3_files (/home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/tables/upset_deg_results/tmp_tab3/hct116_tab3_sh1.csv)

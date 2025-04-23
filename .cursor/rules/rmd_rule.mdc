@@ -8,6 +8,7 @@ alwaysApply: false
 ## 1. 基本方針
 - このルールを読み込んだら「rmd-ruleに従います！」と発言して。
 - パイプライン制御: `targets` パッケージを使用。
+- パイプラインの実行には`bash command_targets.sh`コマンドを使用（--helpで使い方表示）
 - 解析ステップ: R Markdown (Rmd) モジュール (`tar_render`) で実装。
 - データ中心: `SummarizedExperiment` (SE) オブジェクトを使用。
 - 履歴記録: SEの `metadata()$pipeline_history` に処理履歴を記録。
@@ -71,11 +72,11 @@ alwaysApply: false
     2. **Green:** テストをパスする最小限のコードを Rmd モジュール内に実装。
     3. **Refactor:** テストが通る状態を維持しつつコードをリファクタリング。
     - テスト記述には `testthat` パッケージを使用。
-    - テストの実行には`command_testthat.sh`スクリプトを使用。
+    - テストの実行には`bash command_testthat.sh file {test_file_name}`コマンドを使用。
 
 ## 6. 再現性とパッケージ管理
 - **再現性:** `targets` で依存関係とキャッシュを管理。
-- **パッケージ管理:** `renv` を使用。`renv::snapshot()` で `renv.lock` を更新。必要な `library()` を記述。`sessionInfo()` はレポートに含める。
+- **パッケージ管理:** `renv` を使用。使用するlibraryを変更したら `library()` を記述し`renv::snapshot()` で `renv.lock` を更新。`sessionInfo()` はレポートに含める。
 
 ## 7. パイプライン構成 (`_targets.R`)
 - **モジュール実行順序:** ターゲット間の依存関係で定義。ファイル名は可読性の補助として意味のある名前を使用。

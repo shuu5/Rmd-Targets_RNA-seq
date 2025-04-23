@@ -23,7 +23,9 @@ tar_option_set(
     "S4Vectors",          # SummarizedExperiment の基盤
     "futile.logger",      # ログ出力
     "fs",                 # ファイルシステム操作
-    "rmarkdown"           # R Markdownレポートの生成
+    "rmarkdown",          # R Markdownレポートの生成
+    "ComplexHeatmap",     # UpSetプロット生成（UpSetRの代替）
+    "grid"                # 高度なグラフィック操作（ComplexHeatmapに必要）
   ),
   # targets が中間データや結果を保存するデフォルトのファイル形式
   format = "rds" 
@@ -120,6 +122,19 @@ list(
         group_table_dirs[[group]] <- group_table_dir
       }
 
+      # upset_deg_results モジュール用のディレクトリも作成
+      upset_module_name <- "upset_deg_results"
+      upset_plot_dir <- fs::path(plot_dir_path, upset_module_name)
+      upset_table_dir <- fs::path(table_dir_path, upset_module_name)
+      fs::dir_create(upset_plot_dir, recurse = TRUE)
+      fs::dir_create(upset_table_dir, recurse = TRUE)
+      
+      # upset_deg_results モジュール用の一時ディレクトリも作成
+      tmp_ifitm3_dir <- fs::path(table_dir_path, upset_module_name, "tmp_ifitm3")
+      tmp_tab3_dir <- fs::path(table_dir_path, upset_module_name, "tmp_tab3")
+      fs::dir_create(tmp_ifitm3_dir, recurse = TRUE)
+      fs::dir_create(tmp_tab3_dir, recurse = TRUE)
+
       # _targets.logファイルを初期化（パイプライン開始時に古いログを削除）
       if (fs::file_exists(log_file_path)) {
         fs::file_delete(log_file_path)
@@ -152,6 +167,7 @@ list(
       flog.info("プロットディレクトリ: %s", plot_dir_path)
       flog.info("テーブルディレクトリ: %s", table_dir_path)
       flog.info("サンプルグループごとのプロットディレクトリとテーブルディレクトリを作成しました")
+      flog.info("UpSet解析用ディレクトリを作成しました: %s, %s", upset_plot_dir, upset_table_dir)
 
       # このターゲットが生成するものを明示するためにパスのリストを返す
       return(list(
@@ -160,7 +176,9 @@ list(
         plot_dir = plot_dir_path,
         table_dir = table_dir_path,
         group_plot_dirs = group_plot_dirs,
-        group_table_dirs = group_table_dirs
+        group_table_dirs = group_table_dirs,
+        upset_plot_dir = upset_plot_dir,
+        upset_table_dir = upset_table_dir
       ))
     },
     cue = tar_cue(mode = "always") # パイプライン実行時に常にこのターゲットを実行
@@ -489,6 +507,200 @@ list(
       
       flog.info("ターゲット完了: rmd_deg_sw620_tab3")
       return(result_se)
+    }
+  ),
+  
+  # IFITM3 遺伝子のHCT116とSW620間の共通DEG解析（UpSetプロット）
+  tar_target(
+    name = rmd_upset_ifitm3,
+    command = {
+      dir_paths <- ensure_directories
+      flog.info("ターゲット開始: rmd_upset_ifitm3 (IFITM3 DEG CSVファイルのUpSet解析)")
+      
+      # グループ名（出力ファイル名に使用）
+      group_name <- "ifitm3"
+      
+      # 出力パスを構築
+      output_path <- fs::path(dir_paths$report_dir, paste0("upset_", group_name, ".html"))
+      
+      # 入力ディレクトリを設定
+      result_dirs <- list(
+        hct116_ifitm3 = fs::path(table_dir_path, "deg_edgeR", "hct116_ifitm3"),
+        sw620_ifitm3 = fs::path(table_dir_path, "deg_edgeR", "sw620_ifitm3")
+      )
+      
+      # 特定のCSVファイルのみを対象とするための専用ディレクトリを作成
+      tmp_ifitm3_dir <- fs::path(table_dir_path, "upset_deg_results", "tmp_ifitm3")
+      fs::dir_create(tmp_ifitm3_dir, recurse = TRUE)
+      
+      # HCT116_IFITM3の各CSVファイルへのパス
+      hct116_ifitm3_sh1_path <- fs::path(result_dirs$hct116_ifitm3, "deg_sh1_vs_scramble.csv")
+      hct116_ifitm3_sh2_path <- fs::path(result_dirs$hct116_ifitm3, "deg_sh2_vs_scramble.csv")
+      
+      # SW620_IFITM3の各CSVファイルへのパス
+      sw620_ifitm3_sh1_path <- fs::path(result_dirs$sw620_ifitm3, "deg_sh1_vs_scramble.csv")
+      sw620_ifitm3_sh2_path <- fs::path(result_dirs$sw620_ifitm3, "deg_sh2_vs_scramble.csv")
+      
+      # 新しいディレクトリにCSVファイルをコピー（シンボリックリンクも可）
+      fs::file_copy(hct116_ifitm3_sh1_path, fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh1.csv"), overwrite = TRUE)
+      fs::file_copy(hct116_ifitm3_sh2_path, fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh2.csv"), overwrite = TRUE)
+      fs::file_copy(sw620_ifitm3_sh1_path, fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh1.csv"), overwrite = TRUE)
+      fs::file_copy(sw620_ifitm3_sh2_path, fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh2.csv"), overwrite = TRUE)
+      
+      # 新しい一時ディレクトリを入力として使用
+      # 修正: 2つ以上のディレクトリを提供する
+      result_dirs <- list(
+        hct116_ifitm3_files = fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh1.csv"),
+        sw620_ifitm3_files = fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh1.csv")
+      )
+      
+      # 各入力ディレクトリの存在を確認
+      for (name in names(result_dirs)) {
+        dir_path <- result_dirs[[name]]
+        if (!fs::dir_exists(dir_path) && !fs::file_exists(dir_path)) {
+          msg <- sprintf("パスが存在しません: %s", dir_path)
+          flog.error(msg)
+          stop(msg)
+        }
+      }
+      
+      # レンダリング環境を作成
+      render_env <- new.env()
+      
+      # upset_deg_results.Rmdをレンダリング
+      rmarkdown::render(
+        input = fs::path_abs("Rmd/upset_deg_results.Rmd"),
+        output_file = output_path,
+        output_format = common_output_format,
+        output_options = rmd_output_options,
+        params = list(
+          experiment_id = experiment_id,
+          result_dirs = result_dirs,
+          output_dir = dir_paths$report_dir,
+          plot_dir = dir_paths$upset_plot_dir,
+          table_dir = dir_paths$upset_table_dir,
+          group_name = group_name,
+          gene_id_column = "gene_name"
+        ),
+        envir = render_env,
+        quiet = TRUE,
+        knit_root_dir = fs::path_abs(".")
+      )
+      
+      flog.info("upset_deg_results.Rmd のレンダリング完了: %s", output_path)
+      flog.info("プロット保存先: %s", dir_paths$upset_plot_dir)
+      flog.info("テーブル保存先: %s", dir_paths$upset_table_dir)
+      
+      # 一時ディレクトリを削除（オプション）
+      # fs::dir_delete(tmp_ifitm3_dir)
+      
+      # レンダリング環境から結果を取得
+      if (!exists("result", envir = render_env)) {
+        msg <- "upset_deg_results.Rmd の実行環境で 'result' オブジェクトが見つかりません。"
+        flog.fatal(msg)
+        stop(msg)
+      }
+      result_object <- get("result", envir = render_env)
+      
+      flog.info("ターゲット完了: rmd_upset_ifitm3")
+      return(result_object)
+    }
+  ),
+  
+  # TAB3 遺伝子のHCT116とSW620間の共通DEG解析（UpSetプロット）
+  tar_target(
+    name = rmd_upset_tab3,
+    command = {
+      dir_paths <- ensure_directories
+      flog.info("ターゲット開始: rmd_upset_tab3 (TAB3 DEG CSVファイルのUpSet解析)")
+      
+      # グループ名（出力ファイル名に使用）
+      group_name <- "tab3"
+      
+      # 出力パスを構築
+      output_path <- fs::path(dir_paths$report_dir, paste0("upset_", group_name, ".html"))
+      
+      # 入力ディレクトリを設定
+      result_dirs <- list(
+        hct116_tab3 = fs::path(table_dir_path, "deg_edgeR", "hct116_tab3"),
+        sw620_tab3 = fs::path(table_dir_path, "deg_edgeR", "sw620_tab3")
+      )
+      
+      # 特定のCSVファイルのみを対象とするための専用ディレクトリを作成
+      tmp_tab3_dir <- fs::path(table_dir_path, "upset_deg_results", "tmp_tab3")
+      fs::dir_create(tmp_tab3_dir, recurse = TRUE)
+      
+      # HCT116_TAB3の各CSVファイルへのパス
+      hct116_tab3_sh1_path <- fs::path(result_dirs$hct116_tab3, "deg_sh1_vs_scramble.csv")
+      hct116_tab3_sh2_path <- fs::path(result_dirs$hct116_tab3, "deg_sh2_vs_scramble.csv")
+      
+      # SW620_TAB3の各CSVファイルへのパス
+      sw620_tab3_sh1_path <- fs::path(result_dirs$sw620_tab3, "deg_sh1_vs_scramble.csv")
+      sw620_tab3_sh2_path <- fs::path(result_dirs$sw620_tab3, "deg_sh2_vs_scramble.csv")
+      
+      # 新しいディレクトリにCSVファイルをコピー（シンボリックリンクも可）
+      fs::file_copy(hct116_tab3_sh1_path, fs::path(tmp_tab3_dir, "hct116_tab3_sh1.csv"), overwrite = TRUE)
+      fs::file_copy(hct116_tab3_sh2_path, fs::path(tmp_tab3_dir, "hct116_tab3_sh2.csv"), overwrite = TRUE)
+      fs::file_copy(sw620_tab3_sh1_path, fs::path(tmp_tab3_dir, "sw620_tab3_sh1.csv"), overwrite = TRUE)
+      fs::file_copy(sw620_tab3_sh2_path, fs::path(tmp_tab3_dir, "sw620_tab3_sh2.csv"), overwrite = TRUE)
+      
+      # 新しい一時ディレクトリを入力として使用
+      # 修正: 2つ以上のディレクトリを提供する
+      result_dirs <- list(
+        hct116_tab3_files = fs::path(tmp_tab3_dir, "hct116_tab3_sh1.csv"),
+        sw620_tab3_files = fs::path(tmp_tab3_dir, "sw620_tab3_sh1.csv")
+      )
+      
+      # 各入力ディレクトリの存在を確認
+      for (name in names(result_dirs)) {
+        dir_path <- result_dirs[[name]]
+        if (!fs::dir_exists(dir_path) && !fs::file_exists(dir_path)) {
+          msg <- sprintf("パスが存在しません: %s", dir_path)
+          flog.error(msg)
+          stop(msg)
+        }
+      }
+      
+      # レンダリング環境を作成
+      render_env <- new.env()
+      
+      # upset_deg_results.Rmdをレンダリング
+      rmarkdown::render(
+        input = fs::path_abs("Rmd/upset_deg_results.Rmd"),
+        output_file = output_path,
+        output_format = common_output_format,
+        output_options = rmd_output_options,
+        params = list(
+          experiment_id = experiment_id,
+          result_dirs = result_dirs,
+          output_dir = dir_paths$report_dir,
+          plot_dir = dir_paths$upset_plot_dir,
+          table_dir = dir_paths$upset_table_dir,
+          group_name = group_name,
+          gene_id_column = "gene_name"
+        ),
+        envir = render_env,
+        quiet = TRUE,
+        knit_root_dir = fs::path_abs(".")
+      )
+      
+      flog.info("upset_deg_results.Rmd のレンダリング完了: %s", output_path)
+      flog.info("プロット保存先: %s", dir_paths$upset_plot_dir)
+      flog.info("テーブル保存先: %s", dir_paths$upset_table_dir)
+      
+      # 一時ディレクトリを削除（オプション）
+      # fs::dir_delete(tmp_tab3_dir)
+      
+      # レンダリング環境から結果を取得
+      if (!exists("result", envir = render_env)) {
+        msg <- "upset_deg_results.Rmd の実行環境で 'result' オブジェクトが見つかりません。"
+        flog.fatal(msg)
+        stop(msg)
+      }
+      result_object <- get("result", envir = render_env)
+      
+      flog.info("ターゲット完了: rmd_upset_tab3")
+      return(result_object)
     }
   )
 )

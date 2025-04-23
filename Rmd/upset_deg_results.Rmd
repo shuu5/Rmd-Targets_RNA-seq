@@ -1,0 +1,505 @@
+---
+title: "RNA-seq解析: DEG結果のUpSetプロット (実験ID: `r params$experiment_id`)"
+date: "`r format(Sys.time(), '%Y-%m-%d %H:%M:%S')`"
+params:
+  experiment_id: "default_id"
+  # 入力設定
+  result_dirs: NULL  # DEG結果ディレクトリのリスト (list(group1 = "path/to/group1", group2 = "path/to/group2"))
+  # 出力設定
+  output_dir: ""     # 結果出力ディレクトリ
+  plot_dir: ""       # プロット出力ディレクトリ
+  table_dir: ""      # テーブル出力ディレクトリ
+  # 処理パラメータ
+  group_name: "combined" # 出力ファイル名のprefixとなるグループ名
+  gene_id_column: "gene_name" # 遺伝子名カラム
+---
+
+```{r setup, include=FALSE}
+# 必要なパッケージの読み込みと設定
+library(futile.logger)
+library(here)
+library(fs)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ComplexHeatmap)  # UpSetRからComplexHeatmapに変更
+library(grid)  # グリッド操作のために追加
+library(knitr)
+library(purrr)
+
+# utility関数を読み込む
+source(here("R", "utility.R"))
+
+# ログ設定
+module_name <- "upset_deg_results"
+logger_settings <- setup_logger(params$experiment_id, module_name)
+flog.appender(logger_settings$appender)
+flog.layout(logger_settings$layout)
+flog.threshold(logger_settings$threshold)
+
+# knitrオプションを設定
+knitr::opts_chunk$set(
+  message = FALSE, 
+  warning = FALSE, 
+  fig.width = 10,
+  fig.height = 8,
+  dpi = 300
+)
+
+# タイムゾーンの統一
+Sys.setenv(TZ = "Asia/Tokyo")
+
+# グラフのテーマ設定
+theme_set(theme_classic())
+
+# 既存のオブジェクトをクリーンアップ（paramsは保持）
+rm(list = setdiff(ls(), c("params")))
+
+flog.info("--- セットアップ：R Markdownドキュメントを実行開始 ---")
+flog.info("パラメータ情報: experiment_id = %s", params$experiment_id)
+flog.debug("出力ディレクトリ: %s", params$output_dir)
+flog.debug("プロットディレクトリ: %s", params$plot_dir)
+flog.debug("テーブルディレクトリ: %s", params$table_dir)
+flog.debug("グループ名: %s", params$group_name)
+flog.debug("遺伝子名カラム: %s", params$gene_id_column)
+flog.info("セットアップ完了")
+```
+
+```{r check_input, include=FALSE}
+flog.info("--- 入力データの確認開始 ---")
+
+# 入力ディレクトリの確認
+if (is.null(params$result_dirs) || length(params$result_dirs) < 2) {
+  msg <- "少なくとも2つの結果ディレクトリが必要です"
+  flog.error(msg)
+  stop(msg)
+}
+
+# 各ディレクトリの存在確認
+for (name in names(params$result_dirs)) {
+  dir_path <- params$result_dirs[[name]]
+  if (!fs::dir_exists(dir_path)) {
+    msg <- sprintf("ディレクトリが存在しません: %s (%s)", name, dir_path)
+    flog.error(msg)
+    stop(msg)
+  }
+  flog.info("入力ディレクトリを確認: %s = %s", name, dir_path)
+}
+
+# 出力ディレクトリの確認と作成
+if (!is.null(params$plot_dir) && params$plot_dir != "") {
+  if (!fs::dir_exists(params$plot_dir)) {
+    flog.info("プロットディレクトリを作成します: %s", params$plot_dir)
+    fs::dir_create(params$plot_dir, recursive = TRUE)
+  }
+}
+
+if (!is.null(params$table_dir) && params$table_dir != "") {
+  if (!fs::dir_exists(params$table_dir)) {
+    flog.info("テーブルディレクトリを作成します: %s", params$table_dir)
+    fs::dir_create(params$table_dir, recursive = TRUE)
+  }
+}
+
+flog.info("--- 入力データの確認完了 ---")
+```
+
+```{r load_deg_files, include=FALSE}
+flog.info("--- DEGファイルの読み込み開始 ---")
+
+# 各ディレクトリからDEGファイルを読み込む関数
+load_deg_files <- function(dir_path, gene_column) {
+  # パスがディレクトリかファイルかを確認
+  if (fs::is_dir(dir_path)) {
+    # ディレクトリ内のCSVファイルを検索
+    csv_files <- fs::dir_ls(dir_path, glob = "*.csv")
+    
+    if (length(csv_files) == 0) {
+      flog.warn("ディレクトリにCSVファイルが見つかりません: %s", dir_path)
+      return(NULL)
+    }
+  } else if (fs::is_file(dir_path) && grepl("\\.csv$", dir_path)) {
+    # 直接CSVファイルが指定された場合
+    csv_files <- dir_path
+  } else {
+    flog.warn("有効なディレクトリまたはCSVファイルではありません: %s", dir_path)
+    return(NULL)
+  }
+  
+  # 各ファイルを読み込み、遺伝子名のリストを取得
+  result_list <- list()
+  
+  for (file_path in csv_files) {
+    file_name <- fs::path_file(file_path)
+    flog.debug("CSVファイルを読み込み: %s", file_path)
+    
+    # CSVファイルを読み込み
+    tryCatch({
+      # ファイルの最初の数行を読み込み、列名を確認
+      first_lines <- readLines(file_path, n = 5)
+      has_rownames <- grepl('^"',first_lines[2]) # 最初の列がダブルクォートで始まる場合は行名あり
+      
+      # CSVファイルを適切にread.csvで読み込み
+      if (has_rownames) {
+        df <- read.csv(file_path, row.names = 1, check.names = FALSE)
+        flog.debug("ファイル %s には行名があります", file_name)
+      } else {
+        df <- read.csv(file_path, check.names = FALSE)
+        flog.debug("ファイル %s には行名がありません", file_name)
+      }
+      
+      # 指定された遺伝子カラムが存在するか確認
+      if (!gene_column %in% colnames(df)) {
+        flog.warn("ファイル %s に列 %s が見つかりません", file_name, gene_column)
+        next
+      }
+      
+      # 遺伝子名のみを抽出
+      gene_names <- df[[gene_column]]
+      
+      # NAを除外
+      gene_names <- gene_names[!is.na(gene_names)]
+      
+      # 空文字列を除外
+      gene_names <- gene_names[gene_names != ""]
+      
+      result_list[[file_name]] <- gene_names
+      
+      flog.debug("ファイル %s から %d 個の遺伝子を読み込みました", file_name, length(gene_names))
+    }, error = function(e) {
+      flog.warn("ファイル %s の読み込みに失敗しました: %s", file_name, e$message)
+    })
+  }
+  
+  return(result_list)
+}
+
+# 全ディレクトリからDEGファイルを読み込む
+gene_sets <- list()
+
+for (name in names(params$result_dirs)) {
+  dir_path <- params$result_dirs[[name]]
+  flog.info("ディレクトリからDEGファイルを読み込み: %s", name)
+  
+  # DEGファイルを読み込み
+  deg_files <- load_deg_files(dir_path, params$gene_id_column)
+  
+  if (!is.null(deg_files) && length(deg_files) > 0) {
+    # 各ファイルに接頭辞としてグループ名を追加
+    renamed_files <- deg_files
+    names(renamed_files) <- paste0(name, "_", names(deg_files))
+    
+    # gene_setsリストに追加
+    gene_sets <- c(gene_sets, renamed_files)
+    
+    flog.info("グループ %s から %d 個のDEGファイルを読み込みました", name, length(deg_files))
+  } else {
+    flog.warn("グループ %s からDEGファイルを読み込めませんでした", name)
+  }
+}
+
+# 読み込んだ遺伝子セットの数を確認
+if (length(gene_sets) < 2) {
+  msg <- "少なくとも2つの遺伝子セットが必要です"
+  flog.error(msg)
+  stop(msg)
+}
+
+flog.info("合計 %d 個の遺伝子セットを読み込みました", length(gene_sets))
+flog.info("--- DEGファイルの読み込み完了 ---")
+```
+
+```{r create_upset_data, include=FALSE}
+flog.info("--- UpSetプロットデータの作成開始 ---")
+
+# UpSetプロット用のデータフレームを作成
+create_upset_data <- function(gene_sets) {
+  # すべての遺伝子名を取得
+  all_genes <- unique(unlist(gene_sets))
+  flog.debug("合計ユニーク遺伝子数: %d", length(all_genes))
+  
+  # ComplexHeatmap用のcomb_matを作成
+  flog.debug("make_comb_mat関数を使用してデータを準備")
+  
+  # 入力はリスト形式のままで良い
+  comb_mat <- ComplexHeatmap::make_comb_mat(gene_sets, mode = "distinct")
+  
+  flog.debug("データセット数: %d", length(ComplexHeatmap::set_name(comb_mat)))
+  
+  # 少なくとも1つのセットが必要
+  if (length(ComplexHeatmap::set_name(comb_mat)) == 0) {
+    msg <- "遺伝子セットが見つかりません。少なくとも1つのセットが必要です。"
+    flog.error(msg)
+    stop(msg)
+  }
+  
+  return(comb_mat)
+}
+
+# UpSetプロットデータを作成
+tryCatch({
+  upset_data <- create_upset_data(gene_sets)
+  flog.info("UpSetプロット用データを作成: %d セット", length(ComplexHeatmap::set_name(upset_data)))
+  
+  # set_namesを事前に用意して確認
+  set_names <- ComplexHeatmap::set_name(upset_data)
+  flog.debug("プロット用セット名: %s", paste(set_names, collapse=", "))
+  
+  if (length(set_names) == 0) {
+    msg <- "プロット用のセット名が見つかりません。"
+    flog.error(msg)
+    stop(msg)
+  }
+  
+  # 各組み合わせに対応する遺伝子リストを抽出する関数
+  extract_intersection_genes <- function(upset_data, combination) {
+    # ComplexHeatmapのextract_comb関数を使用
+    genes <- ComplexHeatmap::extract_comb(upset_data, combination)
+    return(genes)
+  }
+  
+  # すべての組み合わせを取得
+  comb_names <- ComplexHeatmap::comb_name(upset_data)
+  
+  # 各組み合わせの遺伝子を抽出
+  intersection_genes <- list()
+  for (combo_name in comb_names) {
+    genes <- extract_intersection_genes(upset_data, combo_name)
+    
+    if (length(genes) > 0) {
+      intersection_genes[[combo_name]] <- genes
+      flog.debug("組み合わせ %s: %d 遺伝子", combo_name, length(genes))
+    }
+  }
+}, error = function(e) {
+  flog.error("UpSetプロットデータの作成中にエラーが発生しました: %s", e$message)
+  # エラーを再び発生させる
+  stop(e)
+})
+
+flog.info("--- UpSetプロットデータの作成完了 ---")
+```
+
+```{r create_upset_plot_function, include=FALSE}
+# UpSetプロット作成のための関数
+create_upset_plot <- function(comb_mat, main_title = NULL) {
+  flog.debug("UpSetプロット作成関数を実行")
+  
+  if (is.null(main_title)) {
+    main_title <- paste0("遺伝子名（", params$gene_id_column, "）に基づくDEG結果の比較")
+  }
+  
+  # セット名が非常に長い場合は切り詰める
+  set_names <- ComplexHeatmap::set_name(comb_mat)
+  if (any(nchar(set_names) > 30)) {
+    flog.debug("セット名が長いため切り詰めます")
+    short_names <- substr(set_names, 1, 30)
+    for (i in 1:length(short_names)) {
+      if (nchar(set_names[i]) > 30) {
+        short_names[i] <- paste0(short_names[i], "...")
+      }
+    }
+    # セット名を更新
+    ComplexHeatmap::set_name(comb_mat) <- short_names
+  }
+  
+  # ComplexHeatmapを使ったUpSetプロットの作成
+  upset_plot <- ComplexHeatmap::UpSet(comb_mat, 
+                     set_order = ComplexHeatmap::set_name(comb_mat),
+                     top_annotation = ComplexHeatmap::upset_top_annotation(
+                       comb_mat,
+                       height = grid::unit(4, "cm"),
+                       annotation_name_side = "left",
+                       axis_param = list(gp = grid::gpar(fontsize = 12))
+                     ),
+                     right_annotation = ComplexHeatmap::upset_right_annotation(
+                       comb_mat,
+                       width = grid::unit(4, "cm"),
+                       axis_param = list(gp = grid::gpar(fontsize = 12))
+                     ),
+                     column_title = main_title,
+                     comb_order = order(ComplexHeatmap::comb_size(comb_mat), decreasing = TRUE),
+                     row_names_gp = grid::gpar(fontsize = 12),
+                     column_names_gp = grid::gpar(fontsize = 12))
+  
+  return(upset_plot)
+}
+```
+
+```{r visualize_results, fig.height=8, fig.width=12}
+# このセクションはHTMLに表示するためのUpSetプロットの可視化コードです
+
+# データが存在するか確認
+if (exists("upset_data") && !is.null(upset_data)) {
+  set_names <- ComplexHeatmap::set_name(upset_data)
+  
+  # セットが少なくとも1つ存在するか確認
+  if (length(set_names) > 0) {
+    # セット名を表示（デバッグ用）
+    cat("プロット用セット名:", paste(set_names, collapse=", "), "\n")
+    
+    # UpSetプロットのタイトル設定
+    main_title <- paste0("遺伝子名（", params$gene_id_column, "）に基づくDEG結果の比較 - ", params$group_name)
+    
+    # UpSetプロットの作成
+    upset_plot <- create_upset_plot(upset_data, main_title)
+    
+    # プロットを表示
+    ComplexHeatmap::draw(upset_plot)
+  } else {
+    cat("プロット用のセットがありません。少なくとも1つのセットが必要です。\n")
+  }
+} else {
+  cat("プロット用のデータが正しく準備されていません。\n")
+}
+```
+
+以下のテーブルは、各組み合わせに含まれる遺伝子の数を示しています。
+
+```{r show_intersection_summary}
+# 各組み合わせの遺伝子数を表示
+intersection_summary <- data.frame(
+  Combination = names(intersection_genes),
+  GeneCount = sapply(intersection_genes, length)
+)
+
+# 遺伝子数で降順ソート
+intersection_summary <- intersection_summary[order(-intersection_summary$GeneCount), ]
+
+# テーブルとして表示
+knitr::kable(intersection_summary, 
+            caption = "遺伝子セットの組み合わせと含まれる遺伝子数",
+            col.names = c("組み合わせ", "遺伝子数"))
+```
+
+```{r save_outputs, include=FALSE}
+flog.info("--- 出力ファイル保存開始 ---")
+
+# プロットの保存
+if (!is.null(params$plot_dir) && params$plot_dir != "") {
+  if (exists("upset_data") && !is.null(upset_data)) {
+    set_names <- ComplexHeatmap::set_name(upset_data)
+    
+    # セットが少なくとも1つ存在するか確認
+    if (length(set_names) > 0) {
+      # UpSetプロットを保存
+      plot_path <- fs::path(params$plot_dir, "upset_plot.png")
+      flog.debug("UpSetプロットを保存: %s", plot_path)
+      
+      # 保存前にディレクトリの存在を再確認
+      if (!fs::dir_exists(params$plot_dir)) {
+        flog.info("プロットディレクトリを作成します: %s", params$plot_dir)
+        fs::dir_create(params$plot_dir, recursive = TRUE)
+      }
+      
+      # 既存のファイルをクリア
+      if (file.exists(plot_path)) {
+        flog.debug("既存のプロットファイルを削除: %s", plot_path)
+        file.remove(plot_path)
+      }
+      
+      # ファイル保存時のエラーハンドリングを強化
+      tryCatch({
+        # プロットをPNGとして保存
+        png(filename = plot_path, width = 12, height = 8, units = "in", res = 300)
+        # on.exit を使って確実に dev.off() を呼ぶ
+        on.exit(dev.off(), add = TRUE)
+        
+        # UpSetプロットのタイトル設定
+        main_title <- paste0("遺伝子名（", params$gene_id_column, "）に基づくDEG結果の比較 - ", params$group_name)
+        
+        # upset_plot が存在することを確認
+        if (exists("upset_plot") && !is.null(upset_plot)) {
+          flog.debug("upset_plot オブジェクトが存在し、保存を試みます")
+          
+          # tryCatch で draw のエラーをキャッチ
+          print_result <- tryCatch({
+            ComplexHeatmap::draw(upset_plot)
+            TRUE  # 成功
+          }, error = function(e) {
+            flog.error("upset_plot の draw 中にエラー: %s", e$message)
+            FALSE  # 失敗
+          })
+          
+          # draw の結果を確認
+          if (print_result) {
+            flog.debug("upset_plot の draw に成功")
+          } else {
+            flog.warn("upset_plot の draw に失敗")
+          }
+        } else {
+          # upset_plot がない場合、新たにプロットを作成して保存
+          flog.warn("upset_plot オブジェクトが存在しないか NULL のため、新たに作成して保存します")
+          
+          # 関数を使ってUpSetプロットを作成
+          upset_plot <- create_upset_plot(upset_data, main_title)
+          ComplexHeatmap::draw(upset_plot)
+        }
+        
+        # ここで on.exit により dev.off() が呼ばれる
+      }, error = function(e) {
+        flog.error("UpSetプロットの保存中にエラー: %s", e$message)
+        # エラーが発生しても dev.off を呼ぶ（on.exit で処理）
+      })
+      
+      # ファイルが正常に保存されたか確認
+      if (file.exists(plot_path) && file.info(plot_path)$size > 0) {
+        flog.info("UpSetプロットを保存しました: %s", plot_path)
+      } else {
+        flog.error("UpSetプロットの保存に失敗しました。ファイルが作成されていないか、サイズが0です: %s", plot_path)
+      }
+    } else {
+      flog.error("プロットするためのセットが見つかりません")
+    }
+  } else {
+    flog.error("プロット用のデータが正しく準備されていません")
+  }
+}
+
+# 遺伝子リストの保存
+if (!is.null(params$table_dir) && params$table_dir != "" && exists("intersection_genes")) {
+  # 組み合わせごとの遺伝子リストを保存
+  for (combo_name in names(intersection_genes)) {
+    genes <- intersection_genes[[combo_name]]
+    combo_file <- fs::path(params$table_dir, paste0("intersection_", gsub("&", "_and_", combo_name), ".csv"))
+    
+    # CSVファイルに書き込み
+    write.csv(data.frame(gene_name = genes), file = combo_file, row.names = FALSE)
+    flog.debug("組み合わせ %s の遺伝子リストを保存: %s", combo_name, combo_file)
+  }
+  
+  # 全体の結果テーブルも保存
+  if (exists("intersection_summary")) {
+    # 組み合わせとそれに含まれる遺伝子の数を含むテーブル
+    summary_file <- fs::path(params$table_dir, paste0(params$group_name, ".csv"))
+    write.csv(intersection_summary, file = summary_file, row.names = FALSE)
+    flog.info("遺伝子組み合わせの要約テーブルを保存しました: %s", summary_file)
+  } else {
+    flog.warn("intersection_summary オブジェクトが存在しないため、要約テーブルを保存できません")
+  }
+} else {
+  if (!exists("intersection_genes")) {
+    flog.warn("intersection_genes オブジェクトが存在しないため、遺伝子リストを保存できません")
+  }
+}
+
+flog.info("--- 出力ファイル保存完了 ---")
+```
+
+```{r session_info}
+# セッション情報の表示（パイプラインの再現性のため）
+sessionInfo()
+```
+
+```{r return_result, echo=FALSE, include=FALSE}
+# 結果オブジェクトを作成し返す
+module_name <- "upset_deg_results"  # ここでmodule_name変数を再定義
+flog.info("--- %s.Rmd 実行終了、結果オブジェクトを返します ---", module_name)
+result <- list(
+  plots = list(upset_plot = upset_plot),
+  gene_sets = intersection_genes,
+  summary = intersection_summary
+)
+return(result)
+``` 

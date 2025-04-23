@@ -1,130 +1,130 @@
-[2025-04-23 14:28:17] [6] [create_se] --- セットアップ：R Markdownドキュメントを実行開始 ---
-[2025-04-23 14:28:17] [6] [create_se] パラメータ情報: experiment_id = 250418_RNA-seq
-[2025-04-23 14:28:17] [6] [create_se] セットアップ完了
-[2025-04-23 14:28:17] [6] [create_se] --- 入力ファイルの存在確認開始 ---
-[2025-04-23 14:28:17] [8] [create_se] カウントファイル確認OK: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/counts.csv
-[2025-04-23 14:28:17] [8] [create_se] メタデータファイル確認OK: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/sample_metadata.csv
-[2025-04-23 14:28:17] [6] [create_se] --- 入力ファイルの存在確認完了 ---
-[2025-04-23 14:28:17] [6] [create_se] --- 入力ファイルの読み込み開始 ---
-[2025-04-23 14:28:17] [8] [create_se] カウントファイル読み込み中: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/counts.csv
-[2025-04-23 14:28:17] [6] [create_se] カウントファイルを正常に読み込みました。次元: 62700 行 x 13 列
-[2025-04-23 14:28:17] [9] [create_se] カウントデータの列名: gene_id, HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r, SW6if3_1, SW6if3_2, SW6if3_r, SW6tb3_1, SW6tb3_2, SW6tb3_r
-[2025-04-23 14:28:17] [8] [create_se] メタデータファイル読み込み中: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/sample_metadata.csv
-[2025-04-23 14:28:17] [6] [create_se] メタデータファイルを正常に読み込みました。次元: 12 行 x 6 列
-[2025-04-23 14:28:17] [9] [create_se] メタデータの列名: sample_id, cell_line, assay, target_gene, condition, replicate
-[2025-04-23 14:28:17] [6] [create_se] --- 入力ファイルの読み込み完了 ---
-[2025-04-23 14:28:17] [9] [create_se] カウントデータの最初の10行を表示します。
-[2025-04-23 14:28:17] [9] [create_se] サンプルメタデータの最初の10行を表示します。
-[2025-04-23 14:28:17] [6] [create_se] --- データの整合性チェック開始 ---
-[2025-04-23 14:28:17] [8] [create_se] 必須列の存在を確認します。
-[2025-04-23 14:28:17] [8] [create_se] 必須列の存在確認OK。
-[2025-04-23 14:28:17] [8] [create_se] カウントデータとメタデータのサンプルIDの一致を確認します。
-[2025-04-23 14:28:17] [9] [create_se] カウントデータのサンプルID (n=12): HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
-[2025-04-23 14:28:17] [9] [create_se] メタデータのサンプルID (n=12): HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
-[2025-04-23 14:28:17] [6] [create_se] サンプルIDはカウントヘッダーとメタデータ列 'sample_id' で完全に一致します (n=12)。
-[2025-04-23 14:28:17] [8] [create_se] メタデータをカウントデータのサンプル順序 ('HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r, SW6if3_1, SW6if3_2, SW6if3_r, SW6tb3_1, SW6tb3_2, SW6tb3_r') に合わせて並べ替えます。
-[2025-04-23 14:28:17] [6] [create_se] サンプルメタデータをカウントデータの列に合わせて並べ替えました。並べ替え後の次元: 12 行 x 6 列
-[2025-04-23 14:28:17] [9] [create_se] 並べ替え後のメタデータサンプルID: HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
-[2025-04-23 14:28:17] [6] [create_se] --- データの整合性チェック完了 ---
-[2025-04-23 14:28:17] [6] [create_se] --- biomaRtによる遺伝子アノテーション取得開始 ---
-[2025-04-23 14:28:17] [8] [create_se] カウントマトリックスの準備と遺伝子IDの抽出を行います。
-[2025-04-23 14:28:17] [6] [create_se] カウントマトリックスを準備しました。次元: 62700 遺伝子, 12 サンプル。
-[2025-04-23 14:28:17] [6] [create_se] カウントからのバージョン付き遺伝子IDの総数: 62700
-[2025-04-23 14:28:17] [9] [create_se] バージョン付き遺伝子ID (一部): ENSG00000290825.1, ENSG00000223972.6, ENSG00000227232.5, ENSG00000278267.1, ENSG00000243485.5, ENSG00000284332.1...
-[2025-04-23 14:28:17] [8] [create_se] 遺伝子IDからバージョン情報 (例: '.1', '.2') を削除します。
-[2025-04-23 14:28:17] [6] [create_se] バージョンを削除しました。biomaRtクエリ用の一意なバージョンなしID: 62700 個。
-[2025-04-23 14:28:17] [9] [create_se] バージョンなし一意遺伝子ID (一部): ENSG00000290825, ENSG00000223972, ENSG00000227232, ENSG00000278267, ENSG00000243485, ENSG00000284332...
-[2025-04-23 14:28:17] [6] [create_se] biomaRt ホスト 'https://ensembl.org' のデータセット 'hsapiens_gene_ensembl' に接続します。
-[2025-04-23 14:28:21] [6] [create_se] biomaRt に接続しました。
-[2025-04-23 14:28:21] [6] [create_se] biomaRt で取得する属性: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
-[2025-04-23 14:28:21] [6] [create_se] biomaRt から 62700 個の一意な遺伝子IDに対するアノテーションを取得中です...
-[2025-04-23 14:28:22] [6] [create_se] biomaRt から 332576 個のアノテーションレコードを正常に取得しました。
-[2025-04-23 14:28:22] [9] [create_se] 取得したアノテーションデータの列名: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
-[2025-04-23 14:28:22] [8] [create_se] biomaRt 属性名を標準的な列名に変更します (例: external_gene_name -> gene_name)。
-[2025-04-23 14:28:22] [9] [create_se] 列名を変更: 'external_gene_name' -> 'gene_name'
-[2025-04-23 14:28:22] [9] [create_se] 列名を変更: 'transcript_length' -> 'gene_length'
-[2025-04-23 14:28:22] [8] [create_se] 列名変更後のアノテーション列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
-[2025-04-23 14:28:22] [8] [create_se] 取得したアノテーションデータの前処理を行います (重複削除、マッピング)。
-[2025-04-23 14:28:22] [4] [create_se] biomaRt 結果に 271095 行の重複した ensembl_gene_id が見つかりました。最初の行を採用します。
-[2025-04-23 14:28:22] [6] [create_se] 重複を削除しました。一意なアノテーションレコード数: 61481
-[2025-04-23 14:28:22] [8] [create_se] 元のバージョン付き遺伝子ID (62700 個) にアノテーション情報をマッピングします。
-[2025-04-23 14:28:22] [9] [create_se] 結合キー 'ensembl_gene_id' の型を character に統一します。
-[2025-04-23 14:28:22] [9] [create_se] annotation_unique の ensembl_gene_id を character に変換しました。型: character
-[2025-04-23 14:28:22] [9] [create_se] マッピング用データフレームの次元: 62700行 x 2列
-[2025-04-23 14:28:23] [9] [create_se] アノテーションユニークデータの次元: 61481行 x 4列
-[2025-04-23 14:28:23] [9] [create_se] left_join 後の結果データフレームの次元: 62700行 x 5列
-[2025-04-23 14:28:23] [9] [create_se] left_join 後の結果データフレームの列名: original_id, ensembl_gene_id, gene_name, gene_length, gene_biotype
-[2025-04-23 14:28:23] [9] [create_se] rowdata_df の最終次元: 62700行 x 4列
-[2025-04-23 14:28:23] [9] [create_se] rowdata_df の列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
-[2025-04-23 14:28:23] [6] [create_se] アノテーションのマッピング完了。rowData の次元: 62700 行, 4 列。
-[2025-04-23 14:28:23] [4] [create_se] biomaRt アノテーションで NA が含まれる列があります:
-[2025-04-23 14:28:23] [4] [create_se] - 列 'gene_name': 1219 個の NA (全 62700 行中)
-[2025-04-23 14:28:23] [4] [create_se] - 列 'gene_length': 1219 個の NA (全 62700 行中)
-[2025-04-23 14:28:23] [4] [create_se] - 列 'gene_biotype': 1219 個の NA (全 62700 行中)
-[2025-04-23 14:28:23] [8] [create_se] rowData を S4Vectors::DataFrame に変換します。
-[2025-04-23 14:28:23] [6] [create_se] アノテーションを rowData 用の DataFrame にフォーマットしました。次元: 62700 行, 4 列。
-[2025-04-23 14:28:23] [9] [create_se] rowData (DataFrame) の列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
-[2025-04-23 14:28:23] [8] [create_se] 最終チェック: カウントマトリックスと rowData の行名は一致します。
-[2025-04-23 14:28:23] [6] [create_se] --- biomaRtによる遺伝子アノテーション取得完了 ---
-[2025-04-23 14:28:23] [6] [create_se] --- SummarizedExperiment オブジェクト作成開始 ---
-[2025-04-23 14:28:23] [8] [create_se] SummarizedExperiment オブジェクトを作成します。入力データサイズ: (counts: 62700 x 12, colData: 12 x 6, rowData: 62700 x 4)
-[2025-04-23 14:28:23] [9] [create_se] colData用のDataFrameを準備します。サンプルID列名: sample_id
-[2025-04-23 14:28:23] [9] [create_se] colData用のDataFrameの行名を設定しました: HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r
-[2025-04-23 14:28:23] [6] [create_se] SummarizedExperiment オブジェクトを正常に作成しました。
-[2025-04-23 14:28:23] [8] [create_se] SE オブジェクトのクラス: SummarizedExperiment
-[2025-04-23 14:28:23] [8] [create_se] SE オブジェクトの次元: 62700 features, 12 samples
-[2025-04-23 14:28:23] [8] [create_se] SE assay 名: counts
-[2025-04-23 14:28:23] [8] [create_se] SE colData 列名: sample_id, cell_line, assay, target_gene, condition, replicate
-[2025-04-23 14:28:23] [8] [create_se] SE rowData 列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
-[2025-04-23 14:28:23] [6] [create_se] SE オブジェクトのメタデータに実験情報とパイプライン履歴を記録します。
-[2025-04-23 14:28:23] [6] [create_se] SE メタデータに pipeline_history['create_se'] を記録しました。
-[2025-04-23 14:28:23] [6] [create_se] --- SummarizedExperiment オブジェクト作成完了 ---
-[2025-04-23 14:28:23] [6] [create_se] 実験 '250418_RNA-seq' の SummarizedExperiment オブジェクト作成プロセスが正常に完了しました。
-[2025-04-23 14:28:23] [8] [create_se] assaysの一部を表示します
-[2025-04-23 14:28:23] [8] [create_se] colDataの一部を表示します
-[2025-04-23 14:28:23] [8] [create_se] rowDataの一部を表示します
-[2025-04-23 14:28:24] [6] [create_se] gene_biotypeの分布を集計・可視化します
-[2025-04-23 14:28:24] [8] [create_se] gene_biotypeは10種類以上あるため、上位10種類のみをプロットし、残りは'その他'として集計します
-[2025-04-23 14:28:24] [8] [create_se] gene_biotypeの分布をバープロットで可視化します
-[2025-04-23 14:28:24] [6] [create_se] protein_coding遺伝子に関する詳細分析を行います
-[2025-04-23 14:28:24] [6] [create_se] protein_coding遺伝子数: 20063 / 62700 遺伝子 (32.00%)
-[2025-04-23 14:28:24] [8] [create_se] protein_coding遺伝子のアノテーション欠損状況を確認します
-[2025-04-23 14:28:24] [6] [create_se] protein_coding遺伝子のアノテーションに欠損はありません
-[2025-04-23 14:28:24] [6] [create_se] サンプルごとのprotein_coding遺伝子のライブラリサイズを比較します
-[2025-04-23 14:28:24] [6] [create_se] --- plot_protein_coding_library_size 関数を実行します ---
-[2025-04-23 14:28:24] [8] [create_se] サンプルごとのprotein_coding遺伝子のライブラリサイズをバープロットで可視化します
-[2025-04-23 14:28:24] [6] [create_se] --- plot_protein_coding_library_size 関数の実行完了 ---
-[2025-04-23 14:28:25] [6] [create_se] --- サンプル間の発現量分布を比較します ---
-[2025-04-23 14:28:25] [8] [create_se] 生データの発現量分布プロットを作成します
-[2025-04-23 14:28:25] [6] [create_se] --- plot_expression_density 関数を実行します ---
-[2025-04-23 14:28:25] [8] [create_se] パラメータ: log_transform=FALSE, pseudo_count=1.000000, assay_name=counts, adjust=1.500000
-[2025-04-23 14:28:25] [8] [create_se] カウント行列の次元: 62700 x 12
-[2025-04-23 14:28:29] [8] [create_se] ロング形式データの次元: 752400 x 2
-[2025-04-23 14:28:29] [8] [create_se] 外れ値除外のための上限値: 7245.020000 (99 %)
-[2025-04-23 14:28:29] [6] [create_se] --- plot_expression_density 関数の実行完了 ---
-[2025-04-23 14:28:29] [8] [create_se] log2変換後の発現量分布プロットを作成します
-[2025-04-23 14:28:29] [6] [create_se] --- plot_expression_density 関数を実行します ---
-[2025-04-23 14:28:29] [8] [create_se] パラメータ: log_transform=TRUE, pseudo_count=1.000000, assay_name=counts, adjust=1.500000
-[2025-04-23 14:28:29] [8] [create_se] カウント行列の次元: 62700 x 12
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTif3_1 の非ゼロカウント数: 31032 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTif3_2 の非ゼロカウント数: 30778 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTif3_r の非ゼロカウント数: 30184 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTtb3_1 の非ゼロカウント数: 30374 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTtb3_2 の非ゼロカウント数: 28432 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル HCTtb3_r の非ゼロカウント数: 31518 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル SW6if3_1 の非ゼロカウント数: 29618 (全 62700 中)
-[2025-04-23 14:28:29] [9] [create_se] サンプル SW6if3_2 の非ゼロカウント数: 28844 (全 62700 中)
-[2025-04-23 14:28:30] [9] [create_se] サンプル SW6if3_r の非ゼロカウント数: 28725 (全 62700 中)
-[2025-04-23 14:28:30] [9] [create_se] サンプル SW6tb3_1 の非ゼロカウント数: 27310 (全 62700 中)
-[2025-04-23 14:28:30] [9] [create_se] サンプル SW6tb3_2 の非ゼロカウント数: 26252 (全 62700 中)
-[2025-04-23 14:28:30] [9] [create_se] サンプル SW6tb3_r の非ゼロカウント数: 27493 (全 62700 中)
-[2025-04-23 14:28:30] [8] [create_se] ロング形式データの次元: 350560 x 2
-[2025-04-23 14:28:30] [6] [create_se] --- plot_expression_density 関数の実行完了 ---
-[2025-04-23 14:28:30] [8] [create_se] サンプルごとの発現量分布の統計情報を計算します
-[2025-04-23 14:28:32] [6] [create_se] --- サンプル間の発現量分布比較完了 ---
-[2025-04-23 14:28:33] [6] [create_se] --- セッション情報を記録します ---
-[2025-04-23 14:28:33] [6] [create_se] --- create_se.Rmd 実行終了、SEオブジェクトを返します ---
-[2025-04-23 14:28:34] [6] [create_se] create_se.Rmd のレンダリング完了: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/reports/create_se.html
-[2025-04-23 14:28:34] [6] [create_se] [_targets.R] render_env から取得したオブジェクト (se_object) のクラス: SummarizedExperiment
-[2025-04-23 14:28:34] [6] [create_se] ターゲット完了: obj_se_raw (SummarizedExperiment オブジェクトを返します)
-[2025-04-23 14:28:34] [6] [create_se] ターゲット開始: rmd_deg_sw620_tab3 (DEG解析 SW620 & TAB3)
+[2025-04-23 18:40:49] [6] [create_se] --- セットアップ：R Markdownドキュメントを実行開始 ---
+[2025-04-23 18:40:49] [6] [create_se] パラメータ情報: experiment_id = 250418_RNA-seq
+[2025-04-23 18:40:49] [6] [create_se] セットアップ完了
+[2025-04-23 18:40:49] [6] [create_se] --- 入力ファイルの存在確認開始 ---
+[2025-04-23 18:40:49] [8] [create_se] カウントファイル確認OK: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/counts.csv
+[2025-04-23 18:40:49] [8] [create_se] メタデータファイル確認OK: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/sample_metadata.csv
+[2025-04-23 18:40:49] [6] [create_se] --- 入力ファイルの存在確認完了 ---
+[2025-04-23 18:40:50] [6] [create_se] --- 入力ファイルの読み込み開始 ---
+[2025-04-23 18:40:50] [8] [create_se] カウントファイル読み込み中: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/counts.csv
+[2025-04-23 18:40:50] [6] [create_se] カウントファイルを正常に読み込みました。次元: 62700 行 x 13 列
+[2025-04-23 18:40:50] [9] [create_se] カウントデータの列名: gene_id, HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r, SW6if3_1, SW6if3_2, SW6if3_r, SW6tb3_1, SW6tb3_2, SW6tb3_r
+[2025-04-23 18:40:50] [8] [create_se] メタデータファイル読み込み中: /home/rstudio/projects/Rmd_targets_RNA-seq/data/250418_RNA-seq/sample_metadata.csv
+[2025-04-23 18:40:50] [6] [create_se] メタデータファイルを正常に読み込みました。次元: 12 行 x 6 列
+[2025-04-23 18:40:50] [9] [create_se] メタデータの列名: sample_id, cell_line, assay, target_gene, condition, replicate
+[2025-04-23 18:40:50] [6] [create_se] --- 入力ファイルの読み込み完了 ---
+[2025-04-23 18:40:50] [9] [create_se] カウントデータの最初の10行を表示します。
+[2025-04-23 18:40:50] [9] [create_se] サンプルメタデータの最初の10行を表示します。
+[2025-04-23 18:40:50] [6] [create_se] --- データの整合性チェック開始 ---
+[2025-04-23 18:40:50] [8] [create_se] 必須列の存在を確認します。
+[2025-04-23 18:40:50] [8] [create_se] 必須列の存在確認OK。
+[2025-04-23 18:40:50] [8] [create_se] カウントデータとメタデータのサンプルIDの一致を確認します。
+[2025-04-23 18:40:50] [9] [create_se] カウントデータのサンプルID (n=12): HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
+[2025-04-23 18:40:50] [9] [create_se] メタデータのサンプルID (n=12): HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
+[2025-04-23 18:40:50] [6] [create_se] サンプルIDはカウントヘッダーとメタデータ列 'sample_id' で完全に一致します (n=12)。
+[2025-04-23 18:40:50] [8] [create_se] メタデータをカウントデータのサンプル順序 ('HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r, SW6if3_1, SW6if3_2, SW6if3_r, SW6tb3_1, SW6tb3_2, SW6tb3_r') に合わせて並べ替えます。
+[2025-04-23 18:40:50] [6] [create_se] サンプルメタデータをカウントデータの列に合わせて並べ替えました。並べ替え後の次元: 12 行 x 6 列
+[2025-04-23 18:40:50] [9] [create_se] 並べ替え後のメタデータサンプルID: HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r...
+[2025-04-23 18:40:50] [6] [create_se] --- データの整合性チェック完了 ---
+[2025-04-23 18:40:50] [6] [create_se] --- biomaRtによる遺伝子アノテーション取得開始 ---
+[2025-04-23 18:40:50] [8] [create_se] カウントマトリックスの準備と遺伝子IDの抽出を行います。
+[2025-04-23 18:40:51] [6] [create_se] カウントマトリックスを準備しました。次元: 62700 遺伝子, 12 サンプル。
+[2025-04-23 18:40:51] [6] [create_se] カウントからのバージョン付き遺伝子IDの総数: 62700
+[2025-04-23 18:40:51] [9] [create_se] バージョン付き遺伝子ID (一部): ENSG00000290825.1, ENSG00000223972.6, ENSG00000227232.5, ENSG00000278267.1, ENSG00000243485.5, ENSG00000284332.1...
+[2025-04-23 18:40:51] [8] [create_se] 遺伝子IDからバージョン情報 (例: '.1', '.2') を削除します。
+[2025-04-23 18:40:51] [6] [create_se] バージョンを削除しました。biomaRtクエリ用の一意なバージョンなしID: 62700 個。
+[2025-04-23 18:40:51] [9] [create_se] バージョンなし一意遺伝子ID (一部): ENSG00000290825, ENSG00000223972, ENSG00000227232, ENSG00000278267, ENSG00000243485, ENSG00000284332...
+[2025-04-23 18:40:51] [6] [create_se] biomaRt ホスト 'https://ensembl.org' のデータセット 'hsapiens_gene_ensembl' に接続します。
+[2025-04-23 18:41:04] [6] [create_se] biomaRt に接続しました。
+[2025-04-23 18:41:04] [6] [create_se] biomaRt で取得する属性: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
+[2025-04-23 18:41:04] [6] [create_se] biomaRt から 62700 個の一意な遺伝子IDに対するアノテーションを取得中です...
+[2025-04-23 18:41:06] [6] [create_se] biomaRt から 332576 個のアノテーションレコードを正常に取得しました。
+[2025-04-23 18:41:06] [9] [create_se] 取得したアノテーションデータの列名: ensembl_gene_id, external_gene_name, transcript_length, gene_biotype
+[2025-04-23 18:41:06] [8] [create_se] biomaRt 属性名を標準的な列名に変更します (例: external_gene_name -> gene_name)。
+[2025-04-23 18:41:06] [9] [create_se] 列名を変更: 'external_gene_name' -> 'gene_name'
+[2025-04-23 18:41:06] [9] [create_se] 列名を変更: 'transcript_length' -> 'gene_length'
+[2025-04-23 18:41:06] [8] [create_se] 列名変更後のアノテーション列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
+[2025-04-23 18:41:06] [8] [create_se] 取得したアノテーションデータの前処理を行います (重複削除、マッピング)。
+[2025-04-23 18:41:06] [4] [create_se] biomaRt 結果に 271095 行の重複した ensembl_gene_id が見つかりました。最初の行を採用します。
+[2025-04-23 18:41:06] [6] [create_se] 重複を削除しました。一意なアノテーションレコード数: 61481
+[2025-04-23 18:41:06] [8] [create_se] 元のバージョン付き遺伝子ID (62700 個) にアノテーション情報をマッピングします。
+[2025-04-23 18:41:06] [9] [create_se] 結合キー 'ensembl_gene_id' の型を character に統一します。
+[2025-04-23 18:41:06] [9] [create_se] annotation_unique の ensembl_gene_id を character に変換しました。型: character
+[2025-04-23 18:41:06] [9] [create_se] マッピング用データフレームの次元: 62700行 x 2列
+[2025-04-23 18:41:06] [9] [create_se] アノテーションユニークデータの次元: 61481行 x 4列
+[2025-04-23 18:41:06] [9] [create_se] left_join 後の結果データフレームの次元: 62700行 x 5列
+[2025-04-23 18:41:06] [9] [create_se] left_join 後の結果データフレームの列名: original_id, ensembl_gene_id, gene_name, gene_length, gene_biotype
+[2025-04-23 18:41:06] [9] [create_se] rowdata_df の最終次元: 62700行 x 4列
+[2025-04-23 18:41:06] [9] [create_se] rowdata_df の列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
+[2025-04-23 18:41:06] [6] [create_se] アノテーションのマッピング完了。rowData の次元: 62700 行, 4 列。
+[2025-04-23 18:41:06] [4] [create_se] biomaRt アノテーションで NA が含まれる列があります:
+[2025-04-23 18:41:06] [4] [create_se] - 列 'gene_name': 1219 個の NA (全 62700 行中)
+[2025-04-23 18:41:06] [4] [create_se] - 列 'gene_length': 1219 個の NA (全 62700 行中)
+[2025-04-23 18:41:06] [4] [create_se] - 列 'gene_biotype': 1219 個の NA (全 62700 行中)
+[2025-04-23 18:41:06] [8] [create_se] rowData を S4Vectors::DataFrame に変換します。
+[2025-04-23 18:41:06] [6] [create_se] アノテーションを rowData 用の DataFrame にフォーマットしました。次元: 62700 行, 4 列。
+[2025-04-23 18:41:06] [9] [create_se] rowData (DataFrame) の列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
+[2025-04-23 18:41:06] [8] [create_se] 最終チェック: カウントマトリックスと rowData の行名は一致します。
+[2025-04-23 18:41:06] [6] [create_se] --- biomaRtによる遺伝子アノテーション取得完了 ---
+[2025-04-23 18:41:06] [6] [create_se] --- SummarizedExperiment オブジェクト作成開始 ---
+[2025-04-23 18:41:06] [8] [create_se] SummarizedExperiment オブジェクトを作成します。入力データサイズ: (counts: 62700 x 12, colData: 12 x 6, rowData: 62700 x 4)
+[2025-04-23 18:41:06] [9] [create_se] colData用のDataFrameを準備します。サンプルID列名: sample_id
+[2025-04-23 18:41:06] [9] [create_se] colData用のDataFrameの行名を設定しました: HCTif3_1, HCTif3_2, HCTif3_r, HCTtb3_1, HCTtb3_2, HCTtb3_r
+[2025-04-23 18:41:06] [6] [create_se] SummarizedExperiment オブジェクトを正常に作成しました。
+[2025-04-23 18:41:06] [8] [create_se] SE オブジェクトのクラス: SummarizedExperiment
+[2025-04-23 18:41:06] [8] [create_se] SE オブジェクトの次元: 62700 features, 12 samples
+[2025-04-23 18:41:06] [8] [create_se] SE assay 名: counts
+[2025-04-23 18:41:07] [8] [create_se] SE colData 列名: sample_id, cell_line, assay, target_gene, condition, replicate
+[2025-04-23 18:41:07] [8] [create_se] SE rowData 列名: ensembl_gene_id, gene_name, gene_length, gene_biotype
+[2025-04-23 18:41:07] [6] [create_se] SE オブジェクトのメタデータに実験情報とパイプライン履歴を記録します。
+[2025-04-23 18:41:07] [6] [create_se] SE メタデータに pipeline_history['create_se'] を記録しました。
+[2025-04-23 18:41:07] [6] [create_se] --- SummarizedExperiment オブジェクト作成完了 ---
+[2025-04-23 18:41:07] [6] [create_se] 実験 '250418_RNA-seq' の SummarizedExperiment オブジェクト作成プロセスが正常に完了しました。
+[2025-04-23 18:41:07] [8] [create_se] assaysの一部を表示します
+[2025-04-23 18:41:07] [8] [create_se] colDataの一部を表示します
+[2025-04-23 18:41:07] [8] [create_se] rowDataの一部を表示します
+[2025-04-23 18:41:07] [6] [create_se] gene_biotypeの分布を集計・可視化します
+[2025-04-23 18:41:07] [8] [create_se] gene_biotypeは10種類以上あるため、上位10種類のみをプロットし、残りは'その他'として集計します
+[2025-04-23 18:41:07] [8] [create_se] gene_biotypeの分布をバープロットで可視化します
+[2025-04-23 18:41:08] [6] [create_se] protein_coding遺伝子に関する詳細分析を行います
+[2025-04-23 18:41:08] [6] [create_se] protein_coding遺伝子数: 20063 / 62700 遺伝子 (32.00%)
+[2025-04-23 18:41:08] [8] [create_se] protein_coding遺伝子のアノテーション欠損状況を確認します
+[2025-04-23 18:41:08] [6] [create_se] protein_coding遺伝子のアノテーションに欠損はありません
+[2025-04-23 18:41:08] [6] [create_se] サンプルごとのprotein_coding遺伝子のライブラリサイズを比較します
+[2025-04-23 18:41:08] [6] [create_se] --- plot_protein_coding_library_size 関数を実行します ---
+[2025-04-23 18:41:08] [8] [create_se] サンプルごとのprotein_coding遺伝子のライブラリサイズをバープロットで可視化します
+[2025-04-23 18:41:08] [6] [create_se] --- plot_protein_coding_library_size 関数の実行完了 ---
+[2025-04-23 18:41:09] [6] [create_se] --- サンプル間の発現量分布を比較します ---
+[2025-04-23 18:41:09] [8] [create_se] 生データの発現量分布プロットを作成します
+[2025-04-23 18:41:09] [6] [create_se] --- plot_expression_density 関数を実行します ---
+[2025-04-23 18:41:09] [8] [create_se] パラメータ: log_transform=FALSE, pseudo_count=1.000000, assay_name=counts, adjust=1.500000
+[2025-04-23 18:41:09] [8] [create_se] カウント行列の次元: 62700 x 12
+[2025-04-23 18:41:14] [8] [create_se] ロング形式データの次元: 752400 x 2
+[2025-04-23 18:41:14] [8] [create_se] 外れ値除外のための上限値: 7245.020000 (99 %)
+[2025-04-23 18:41:14] [6] [create_se] --- plot_expression_density 関数の実行完了 ---
+[2025-04-23 18:41:14] [8] [create_se] log2変換後の発現量分布プロットを作成します
+[2025-04-23 18:41:14] [6] [create_se] --- plot_expression_density 関数を実行します ---
+[2025-04-23 18:41:14] [8] [create_se] パラメータ: log_transform=TRUE, pseudo_count=1.000000, assay_name=counts, adjust=1.500000
+[2025-04-23 18:41:14] [8] [create_se] カウント行列の次元: 62700 x 12
+[2025-04-23 18:41:14] [9] [create_se] サンプル HCTif3_1 の非ゼロカウント数: 31032 (全 62700 中)
+[2025-04-23 18:41:14] [9] [create_se] サンプル HCTif3_2 の非ゼロカウント数: 30778 (全 62700 中)
+[2025-04-23 18:41:14] [9] [create_se] サンプル HCTif3_r の非ゼロカウント数: 30184 (全 62700 中)
+[2025-04-23 18:41:14] [9] [create_se] サンプル HCTtb3_1 の非ゼロカウント数: 30374 (全 62700 中)
+[2025-04-23 18:41:14] [9] [create_se] サンプル HCTtb3_2 の非ゼロカウント数: 28432 (全 62700 中)
+[2025-04-23 18:41:15] [9] [create_se] サンプル HCTtb3_r の非ゼロカウント数: 31518 (全 62700 中)
+[2025-04-23 18:41:15] [9] [create_se] サンプル SW6if3_1 の非ゼロカウント数: 29618 (全 62700 中)
+[2025-04-23 18:41:15] [9] [create_se] サンプル SW6if3_2 の非ゼロカウント数: 28844 (全 62700 中)
+[2025-04-23 18:41:16] [9] [create_se] サンプル SW6if3_r の非ゼロカウント数: 28725 (全 62700 中)
+[2025-04-23 18:41:16] [9] [create_se] サンプル SW6tb3_1 の非ゼロカウント数: 27310 (全 62700 中)
+[2025-04-23 18:41:16] [9] [create_se] サンプル SW6tb3_2 の非ゼロカウント数: 26252 (全 62700 中)
+[2025-04-23 18:41:16] [9] [create_se] サンプル SW6tb3_r の非ゼロカウント数: 27493 (全 62700 中)
+[2025-04-23 18:41:16] [8] [create_se] ロング形式データの次元: 350560 x 2
+[2025-04-23 18:41:16] [6] [create_se] --- plot_expression_density 関数の実行完了 ---
+[2025-04-23 18:41:16] [8] [create_se] サンプルごとの発現量分布の統計情報を計算します
+[2025-04-23 18:41:19] [6] [create_se] --- サンプル間の発現量分布比較完了 ---
+[2025-04-23 18:41:20] [6] [create_se] --- セッション情報を記録します ---
+[2025-04-23 18:41:20] [6] [create_se] --- create_se.Rmd 実行終了、SEオブジェクトを返します ---
+[2025-04-23 18:41:21] [6] [create_se] create_se.Rmd のレンダリング完了: /home/rstudio/projects/Rmd_targets_RNA-seq/results/250418_RNA-seq/reports/create_se.html
+[2025-04-23 18:41:21] [6] [create_se] [_targets.R] render_env から取得したオブジェクト (se_object) のクラス: SummarizedExperiment
+[2025-04-23 18:41:21] [6] [create_se] ターゲット完了: obj_se_raw (SummarizedExperiment オブジェクトを返します)
+[2025-04-23 18:41:21] [6] [create_se] ターゲット開始: rmd_upset_all (すべてのDEG間のUpSet解析)
