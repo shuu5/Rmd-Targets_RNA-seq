@@ -1,0 +1,3 @@
+sample_id,condition,extra_col
+sample1,control,A
+sample2,treatment,B

@@ -1,0 +1,5 @@
+[2025-04-23 14:19:36] [6] [create_se] --- セットアップ：R Markdownドキュメントを実行開始 ---
+[2025-04-23 14:19:36] [6] [create_se] パラメータ情報: experiment_id = test_experiment
+[2025-04-23 14:19:36] [6] [create_se] セットアップ完了
+[2025-04-23 14:19:36] [6] [create_se] --- 入力ファイルの存在確認開始 ---
+[2025-04-23 14:19:36] [2] [create_se] カウントファイルが見つかりません: /home/rstudio/projects/Rmd_targets_RNA-seq/tests/testdata/create_se/nonexistent_counts.csv

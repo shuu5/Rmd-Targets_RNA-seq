@@ -1,0 +1,7 @@
+sample_id,condition,target_gene,assay,replicate
+ctrl_rep1,scramble,IFITM3,knockdown,1
+ctrl_rep2,scramble,IFITM3,knockdown,2
+ifitm3_kd_sh1_rep1,sh1,IFITM3,knockdown,1
+ifitm3_kd_sh1_rep2,sh1,IFITM3,knockdown,2
+ifitm3_kd_sh2_rep1,sh2,IFITM3,knockdown,1
+ifitm3_kd_sh2_rep2,sh2,IFITM3,knockdown,2 

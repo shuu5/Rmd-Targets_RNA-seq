@@ -1,0 +1,33 @@
+✔ | F W  S  OK | Context
+
+⠏ |          0 | create_se                                                      
+⠋ |          1 | create_se                                                      
+⠧ | 1       17 | create_se                                                      
+⠙ | 1       21 | create_se                                                      
+⠼ | 1       24 | create_se                                                      
+✖ | 1       24 | create_se [32.4s]
+────────────────────────────────────────────────────────────────────────────────
+Failure ('test-create_se.R:109:3'): サンプルIDの不一致をエラーまたは警告で処理する
+`render_with_biomart_mock(...)` did not produce any warnings.
+────────────────────────────────────────────────────────────────────────────────
+
+⠏ |          0 | deg_edgeR                                                      
+⠋ |          1 | deg_edgeR                                                      
+⠙ |         12 | deg_edgeR                                                      
+⠸ |         24 | deg_edgeR                                                      
+⠴ |         26 | deg_edgeR                                                      
+⠧ |         28 | deg_edgeR                                                      
+⠴ |         36 | deg_edgeR                                                      
+⠋ |         41 | deg_edgeR                                                      
+✔ |         44 | deg_edgeR [63.5s]
+
+══ Results ═════════════════════════════════════════════════════════════════════
+Duration: 95.9 s
+
+── Failed tests ────────────────────────────────────────────────────────────────
+Failure ('test-create_se.R:109:3'): サンプルIDの不一致をエラーまたは警告で処理する
+`render_with_biomart_mock(...)` did not produce any warnings.
+
+[ FAIL 1 | WARN 0 | SKIP 0 | PASS 68 ]
+エラー: Test failures
+実行が停止されました 

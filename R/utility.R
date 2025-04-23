@@ -28,31 +28,24 @@ appender_tee_custom <- function(file1_appender, file2_appender) {
 #' 指定されたモジュール名のログファイルと_targets.logの両方にログを出力するように設定します。
 #' モジュール名はログメッセージの一部として含まれ、ソースを識別しやすくします。
 #'
-#' @param module_name モジュール名 (例: "create_se")
 #' @param experiment_id 実験ID (例: "250418_RNA-seq")
+#' @param module_name モジュール名 (例: "create_se")
 #' @param log_level ログレベル (デフォルト: "TRACE")
 #' @return ロガー設定（アペンダー、レイアウト、閾値）を含むリスト
 #' @examples
-#' logger_settings <- setup_logger("create_se", params$experiment_id)
+#' logger_settings <- setup_logger(params$experiment_id, "create_se")
 #' futile.logger::flog.appender(logger_settings$appender)
 #' futile.logger::flog.layout(logger_settings$layout)
 #' futile.logger::flog.threshold(logger_settings$threshold)
 #' futile.logger::flog.info("ロガー設定適用完了")
-setup_logger <- function(module_name, experiment_id, log_level = "TRACE") {
+setup_logger <- function(experiment_id, module_name, log_level = "TRACE") {
   # library(futile.logger) # 関数内でロードする必要はなくなる
   library(fs)
   library(here)
 
-  # テスト中かどうかを判定
-  is_test <- "testthat" %in% loadedNamespaces() || exists("testthat_env")
-
   # ログディレクトリを確認・作成
-  # テスト中なら tests/logs/ に出力、それ以外は logs/ に出力
-  log_dir <- if (is_test) {
-    fs::path("tests", "logs", experiment_id)
-  } else {
-    fs::path("logs", experiment_id)
-  }
+  # すべてのケースで logs/{experiment_id} に出力する
+  log_dir <- fs::path("logs", experiment_id)
   
   if (!fs::dir_exists(log_dir)) {
     fs::dir_create(log_dir, recurse = TRUE)
@@ -67,33 +60,28 @@ setup_logger <- function(module_name, experiment_id, log_level = "TRACE") {
     fs::file_delete(module_log_file)
   }
   
-  # _targets.logも毎回初期化するように変更（既存ファイルを削除）
-  if (fs::file_exists(targets_log_file)) {
-    fs::file_delete(targets_log_file)
-  }
-  
   # モジュール固有のログファイルへのアペンダー（上書きモード）
   appender_module <- appender.file(module_log_file)
 
-  # _targets.log へのアペンダー（上書きモード）- 毎回新規にファイルを作成
-  appender_targets <- if (fs::dir_exists(fs::path_dir(targets_log_file))) {
-    # 新規作成モードのカスタム実装
+  # _targets.log へのアペンダー（追記モード）- _targets.Rで初期化される前提
+  appender_targets <- if (fs::file_exists(targets_log_file)) {
+    # 追記モードのアペンダー
     function(line) {
       cat(line, file = targets_log_file, append = TRUE)
     }
   } else {
-    # ディレクトリが存在しない場合はNULL
-    NULL
+    # ファイルが存在しない場合はディレクトリを作成して新規作成
+    if (!fs::dir_exists(fs::path_dir(targets_log_file))) {
+      fs::dir_create(fs::path_dir(targets_log_file), recurse = TRUE)
+    }
+    function(line) {
+      cat(line, file = targets_log_file, append = FALSE)
+    }
   }
 
   # アペンダーを設定 (関数を返す)
-  final_appender <- if (!is.null(appender_targets)) {
-    # カスタムTeeアペンダーを使用して両方のファイルに書き込む
-    appender_tee_custom(appender_module, appender_targets)
-  } else {
-    # _targets.log のディレクトリが存在しなければモジュールログのみに出力
-    appender_module
-  }
+  # カスタムTeeアペンダーを使用して両方のファイルに書き込む
+  final_appender <- appender_tee_custom(appender_module, appender_targets)
 
   # レイアウト関数を定義（layout.format の代わりに直接関数を定義）
   final_layout <- function(level, msg, ...) {
