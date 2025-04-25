@@ -1,0 +1,3 @@
+INFO [2025-04-25 17:08:34] Starting plot_log_density for assay 'counts'.
+INFO [2025-04-25 17:08:35] Log density plot saved successfully to: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/log_density_counts_IFITM3_TAB3_Knockdown.png
+INFO [2025-04-25 17:08:35] plot_log_density finished successfully.

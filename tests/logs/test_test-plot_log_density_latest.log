@@ -1,0 +1,95 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+
+次のパッケージを付け加えます: ‘glue’
+
+以下のオブジェクトは ‘package:SummarizedExperiment’ からマスクされています:
+
+    trim
+
+以下のオブジェクトは ‘package:GenomicRanges’ からマスクされています:
+
+    trim
+
+以下のオブジェクトは ‘package:IRanges’ からマスクされています:
+
+    trim
+
+
+次のパッケージを付け加えます: ‘dplyr’
+
+以下のオブジェクトは ‘package:data.table’ からマスクされています:
+
+    between, first, last
+
+以下のオブジェクトは ‘package:Biobase’ からマスクされています:
+
+    combine
+
+以下のオブジェクトは ‘package:GenomicRanges’ からマスクされています:
+
+    intersect, setdiff, union
+
+以下のオブジェクトは ‘package:GenomeInfoDb’ からマスクされています:
+
+    intersect
+
+以下のオブジェクトは ‘package:IRanges’ からマスクされています:
+
+    collapse, desc, intersect, setdiff, slice, union
+
+以下のオブジェクトは ‘package:S4Vectors’ からマスクされています:
+
+    first, intersect, rename, setdiff, setequal, union
+
+以下のオブジェクトは ‘package:BiocGenerics’ からマスクされています:
+
+    combine, intersect, setdiff, union
+
+以下のオブジェクトは ‘package:matrixStats’ からマスクされています:
+
+    count
+
+以下のオブジェクトは ‘package:stats’ からマスクされています:
+
+    filter, lag
+
+以下のオブジェクトは ‘package:base’ からマスクされています:
+
+    intersect, setdiff, setequal, union
+
+
+次のパッケージを付け加えます: ‘tidyr’
+
+以下のオブジェクトは ‘package:S4Vectors’ からマスクされています:
+
+    expand
+
+        R/add_biomart_gene_info.R R/create_se_object.R R/plot_library_size.R
+value   ?                         ?                    ?                    
+visible FALSE                     FALSE                FALSE                
+        R/plot_log_density.R R/utility.R
+value   ?                    ?          
+visible FALSE                FALSE      
+
+次のパッケージを付け加えます: ‘testthat’
+
+以下のオブジェクトは ‘package:tidyr’ からマスクされています:
+
+    matches
+
+以下のオブジェクトは ‘package:dplyr’ からマスクされています:
+
+    matches
+
+
+══ Testing test-plot_log_density.R ═════════════════════════════════════════════
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]INFO [2025-04-25 12:28:17] Starting plot_log_density for assay 'counts'.
+INFO [2025-04-25 12:28:17] Log density plot saved successfully to: /tmp/RtmpCqZlrF/test_exp_dens/plots/log_density_counts_test_exp_dens.png
+INFO [2025-04-25 12:28:17] plot_log_density finished successfully.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]ERROR [2025-04-25 12:28:17] Assay not found: 'counts' is not in assayNames(se).
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 4 ] Done!

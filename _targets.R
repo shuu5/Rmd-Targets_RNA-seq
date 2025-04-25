@@ -1,706 +1,149 @@
-library(targets)
-library(tarchetypes)
-# library(yaml) # yamlパッケージの読み込みを削除
-library(fs)
-library(futile.logger)
+# _targets.R
+suppressPackageStartupMessages({
+  library(targets)
+  library(tarchetypes)
+  library(futile.logger)
+  library(fs)
+  library(SummarizedExperiment) # create_se_object 関数内で必要
+  library(biomaRt) # add_biomart_gene_info で必要
+  library(ggplot2) # プロット可視化に必要
+  library(dplyr) # データ操作に必要
+  library(tidyr) # pivot_longer に必要
+  library(tibble) # rownames_to_column に必要
+  library(scales) # カンマ区切りに必要
+  library(glue) # ★ output_file の設定に使用
+})
 
-# ユーティリティ関数の読み込み
-source("R/utility.R")
+# --- 設定 ---
+# experiment_id をグローバルオプションとして設定
+options(TARGETS_EXPERIMENT_ID = "IFITM3_TAB3_Knockdown")
+experiment_id <- getOption("TARGETS_EXPERIMENT_ID", default = "default_experiment")
 
-# --- 基本設定 ---
+# ロギング設定 (INFOレベル以上をコンソールとファイルに出力。起動時にファイルを削除)
+log_dir_pipeline <- fs::path("logs", experiment_id)
+fs::dir_create(log_dir_pipeline)
+log_file_pipeline <- fs::path(log_dir_pipeline, "_targets.log")
+if (fs::file_exists(log_file_pipeline)) fs::file_delete(log_file_pipeline)
+flog.appender(appender.tee(log_file_pipeline))
+flog.threshold(INFO)
+flog.info("ターゲットパイプラインを開始します。実験ID: %s", experiment_id)
 
-# 実験を識別するための一意なID
-experiment_id <- "250418_RNA-seq"
-
-# targets パイプライン全体で使用するパッケージリスト
-tar_option_set(
-  packages = c(
-    "SummarizedExperiment", # RNA-seqデータの格納・操作
-    "readr",              # CSVファイルの高速読み込み
-    "dplyr",              # データ操作
-    "tibble",             # データフレーム操作
-    "cli",                # コマンドラインインターフェースの強化
-    "S4Vectors",          # SummarizedExperiment の基盤
-    "futile.logger",      # ログ出力
-    "fs",                 # ファイルシステム操作
-    "rmarkdown",          # R Markdownレポートの生成
-    "ComplexHeatmap",     # UpSetプロット生成（UpSetRの代替）
-    "grid"                # 高度なグラフィック操作（ComplexHeatmapに必要）
-  ),
-  # targets が中間データや結果を保存するデフォルトのファイル形式
-  format = "rds" 
-)
-
-# --- パス設定 ---
-
-# 各種出力ディレクトリのパスを生成するためのテンプレート
-# `%s` は experiment_id で置き換えられます
-logs_dir_tmpl <- "logs/%s"              # ログファイル用ディレクトリ
-reports_dir_tmpl <- "results/%s/reports" # R Markdownレポート用ディレクトリ
-plots_dir_tmpl <- "results/%s/plots"     # プロット画像用ディレクトリ
-tables_dir_tmpl <- "results/%s/tables"    # 結果テーブル用ディレクトリ
-
-# 上記テンプレートと experiment_id から実際のディレクトリパスを作成
-log_dir_path <- fs::path_abs(sprintf(logs_dir_tmpl, experiment_id))
-report_dir_path <- fs::path_abs(sprintf(reports_dir_tmpl, experiment_id))
-plot_dir_path <- fs::path_abs(sprintf(plots_dir_tmpl, experiment_id))
-table_dir_path <- fs::path_abs(sprintf(tables_dir_tmpl, experiment_id))
-
-# ターゲット実行ログファイルのフルパス
-log_file_path <- fs::path(log_dir_path, "_targets.log")
-
-
-# --- 入力ファイル設定 ---
-
-# 入力ファイルのパスを生成するためのテンプレート
-# `%s` は experiment_id で置き換えられます
-counts_file_path_tmpl <- "data/%s/counts.csv"           # 発現カウントデータファイル
-metadata_file_path_tmpl <- "data/%s/sample_metadata.csv" # サンプルメタデータファイル
-
-# 入力データファイル内で使用される列名
-gene_id_col <- "gene_id"      # 遺伝子IDが含まれる列の名前
-sample_id_col <- "sample_id"    # サンプルIDが含まれる列の名前 (メタデータで使用)
-
-
-# --- BiomaRt 設定 ---
-# Ensembl BioMart から遺伝子アノテーションを取得するための設定
-biomart_host_cfg <- "https://ensembl.org" # 接続する BioMart ホスト
-biomart_dataset_cfg <- "hsapiens_gene_ensembl" # 使用するデータセット (例: ヒト)
-biomart_attributes_cfg <- c(              # 取得する遺伝子属性
-  "ensembl_gene_id",    # Ensembl 遺伝子ID
-  "external_gene_name", # 一般的な遺伝子名 (HGNC symbolなど)
-  "transcript_length",  # 転写産物長 (TPM計算などに利用可能)
-  "gene_biotype"        # 遺伝子の種類 (protein_coding, lncRNAなど)
-)
-
-
-# --- R Markdown レポート設定 ---
-
-# R Markdown ファイルをレンダリングする際の共通設定
-# 出力フォーマット (例: "html_document", "pdf_document")
-common_output_format <- "html_document"
-# 出力フォーマットごとのオプション (rmarkdown::render の output_options 引数に対応)
-rmd_output_options <- list(
-  toc = TRUE,            # 目次(Table of Contents)を表示するかどうか
-  toc_float = TRUE,      # 目次をサイドバーにフロート表示するかどうか
-  code_folding = "hide", # コードチャンクをデフォルトで折りたたむか ("none", "show", "hide")
-  keep_md = TRUE         # レンダリング後の中間マークダウンファイルを保持するかどうか
-)
-
-
-# --- ターゲットリスト定義開始 ---
+# --- パイプライン定義 ---
 list(
-  # ターゲット 0: 必要なディレクトリを作成し、ロガーを設定（常に実行）
-  tar_target(
-    name = ensure_directories,
-    command = {
-      # ログとレポートのディレクトリを作成
-      fs::dir_create(log_dir_path)
-      fs::dir_create(report_dir_path)
-      # 必要であれば他のディレクトリも作成
-      fs::dir_create(plot_dir_path)
-      fs::dir_create(table_dir_path)
-      
-      # モジュール別ディレクトリを作成
-      module_name <- "deg_edgeR"
-      # サンプルグループごとのディレクトリを作成
-      sample_groups <- c("hct116_ifitm3", "hct116_tab3", "sw620_ifitm3", "sw620_tab3")
-      
-      # 各サンプルグループに対するプロットディレクトリとテーブルディレクトリを作成
-      group_plot_dirs <- list()
-      group_table_dirs <- list()
-      
-      for (group in sample_groups) {
-        # プロットディレクトリ
-        group_plot_dir <- fs::path(plot_dir_path, module_name, group)
-        fs::dir_create(group_plot_dir, recurse = TRUE)
-        group_plot_dirs[[group]] <- group_plot_dir
-        
-        # テーブルディレクトリ
-        group_table_dir <- fs::path(table_dir_path, module_name, group)
-        fs::dir_create(group_table_dir, recurse = TRUE)
-        group_table_dirs[[group]] <- group_table_dir
-      }
+  # R/ ディレクトリ内のすべての .R ファイルを読み込む
+  tar_source("R"),
 
-      # upset_deg_results モジュール用のディレクトリも作成
-      upset_module_name <- "upset_deg_results"
-      upset_plot_dir <- fs::path(plot_dir_path, upset_module_name)
-      upset_table_dir <- fs::path(table_dir_path, upset_module_name)
-      fs::dir_create(upset_plot_dir, recurse = TRUE)
-      fs::dir_create(upset_table_dir, recurse = TRUE)
-      
-      # upset_deg_results モジュール用の一時ディレクトリも作成
-      tmp_ifitm3_dir <- fs::path(table_dir_path, upset_module_name, "tmp_ifitm3")
-      tmp_tab3_dir <- fs::path(table_dir_path, upset_module_name, "tmp_tab3")
-      fs::dir_create(tmp_ifitm3_dir, recurse = TRUE)
-      fs::dir_create(tmp_tab3_dir, recurse = TRUE)
-
-      # _targets.logファイルを初期化（パイプライン開始時に古いログを削除）
-      if (fs::file_exists(log_file_path)) {
-        fs::file_delete(log_file_path)
-      }
-
-      # --- ロギング設定 (ディレクトリ作成後に行う) ---
-      # _targets.R 用のカスタムレイアウト関数を定義
-      custom_layout <- function(level, msg, ...) {
-        # メッセージ内の書式指定子を処理
-        if (length(list(...)) > 0) {
-          msg <- do.call(sprintf, c(list(msg), list(...)))
-        }
-        
-        # 最終的なログメッセージ形式を作成
-        formatted_msg <- sprintf("[%s] [%s] [_targets.R] %s\n", 
-                                format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-                                level,
-                                msg)
-        return(formatted_msg)
-      }
-      
-      # _targets.log ファイルへのアペンダーを設定
-      flog.appender(appender.file(log_file_path))
-      flog.layout(custom_layout)
-      flog.threshold(INFO)
-
-      flog.info("必要なディレクトリを作成し、ロガーを初期化しました (experiment_id: %s)", experiment_id)
-      flog.info("ログファイルは %s に書き込まれます", log_file_path)
-      flog.info("レポートディレクトリ: %s", report_dir_path)
-      flog.info("プロットディレクトリ: %s", plot_dir_path)
-      flog.info("テーブルディレクトリ: %s", table_dir_path)
-      flog.info("サンプルグループごとのプロットディレクトリとテーブルディレクトリを作成しました")
-      flog.info("UpSet解析用ディレクトリを作成しました: %s, %s", upset_plot_dir, upset_table_dir)
-
-      # このターゲットが生成するものを明示するためにパスのリストを返す
-      return(list(
-        log_dir = log_dir_path, 
-        report_dir = report_dir_path,
-        plot_dir = plot_dir_path,
-        table_dir = table_dir_path,
-        group_plot_dirs = group_plot_dirs,
-        group_table_dirs = group_table_dirs,
-        upset_plot_dir = upset_plot_dir,
-        upset_table_dir = upset_table_dir
-      ))
-    },
-    cue = tar_cue(mode = "always") # パイプライン実行時に常にこのターゲットを実行
-  ),
-
-  # ターゲット 1: 初期の SummarizedExperiment オブジェクトを作成
-  # ensure_directories に依存
+  # SE オブジェクトを作成するターゲット
   tar_target(
     name = obj_se_raw,
-    command = {
-      # ensure_directories が実行されるようにコマンド内で参照
-      dir_paths <- ensure_directories
-      flog.info("ターゲット開始: obj_se_raw (ensure_directories に依存)")
-
-      # 入力ファイルのパスを作成
-      counts_path <- fs::path_abs(sprintf(counts_file_path_tmpl, experiment_id))
-      metadata_path <- fs::path_abs(sprintf(metadata_file_path_tmpl, experiment_id))
-
-      flog.info("実験ID: %s のSEオブジェクト作成を開始します。", experiment_id)
-      flog.info("カウントファイルパス: %s", counts_path)
-      flog.info("メタデータファイルパス: %s", metadata_path)
-      flog.info("遺伝子ID列: %s", gene_id_col)
-      flog.info("サンプルID列: %s", sample_id_col)
-      flog.info("biomaRt ホスト: %s", biomart_host_cfg)
-      flog.info("biomaRt データセット: %s", biomart_dataset_cfg)
-      flog.info("biomaRt 属性: %s", paste(biomart_attributes_cfg, collapse=", "))
-
-      # 出力パスを構築 (ensure_directoriesからレポートディレクトリパスを使用)
-      output_path <- fs::path(dir_paths$report_dir, "create_se.html")
-
-      # ★ 変更点: render が使用する環境を保持
-      render_env <- new.env()
-
-      # Rmd をレンダリング（レポート生成のため）
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/create_se.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format, # 変数を使用
-        output_options = rmd_output_options, # オプションを別引数で渡す
-        params = list(
-          experiment_id = experiment_id,
-          counts_file_path = counts_path,
-          metadata_file_path = metadata_path,
-          gene_id_column = gene_id_col,
-          sample_id_column = sample_id_col,
-          biomart_host = biomart_host_cfg,
-          biomart_dataset = biomart_dataset_cfg,
-          biomart_attributes = biomart_attributes_cfg
-        ),
-        envir = render_env, # ★ 保持した環境を使用
-        quiet = TRUE, # 必要に応じてレンダリング出力を抑制
-        knit_root_dir = fs::path_abs(".") # ★ 追加: プロジェクトルートを基準に実行
-      )
-
-      flog.info("create_se.Rmd のレンダリング完了: %s", output_path)
-
-      # ★ 変更点: render_env から SE オブジェクトを取得
-      # create_se.Rmd が 'se' という名前でオブジェクトを作成すると仮定
-      if (!exists("se", envir = render_env)) {
-         msg <- "create_se.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
-         flog.fatal(msg)
-         stop(msg)
-      }
-      se_object <- get("se", envir = render_env)
-
-      # ★ デバッグログ追加: 取得したオブジェクトのクラス確認
-      flog.info("[_targets.R] render_env から取得したオブジェクト (se_object) のクラス: %s", paste(class(se_object), collapse=", "))
-      if (!inherits(se_object, "SummarizedExperiment")) {
-          msg <- sprintf("[_targets.R] 取得したオブジェクトは SummarizedExperiment ではありません。クラス: %s", paste(class(se_object), collapse=", "))
-          flog.error(msg)
-          # ここで stop せず、下の return で返すことで、report_check_se 側のログで再度確認できるようにする
-          # stop(msg)
-      }
-
-      flog.info("ターゲット完了: obj_se_raw (SummarizedExperiment オブジェクトを返します)")
-      return(se_object) # ★ 変更点: SE オブジェクトを返す
-    }
+    command = run_with_logging( # ラッパー関数を使用
+      func = create_se_object,
+      # --- create_se_object の引数 ---
+      experiment_id = experiment_id,
+      data_dir = "data",
+      counts_filename = "counts.csv",
+      metadata_filename = "sample_metadata.csv",
+      # --- run_with_logging の引数 ---
+      target_name = "obj_se_raw", # ★ ターゲット名を渡す
+      exp_id = experiment_id, # ★ experiment_id を exp_id に変更
+      log_level = INFO
+    )
   ),
-  
-  # HCT116 & IFITM3 のDEG解析
+
+  # biomaRt で遺伝子情報を追加するターゲット
   tar_target(
-    name = rmd_deg_hct116_ifitm3,
-    command = {
-      dir_paths <- ensure_directories
-      se_object <- obj_se_raw
-      flog.info("ターゲット開始: rmd_deg_hct116_ifitm3 (DEG解析 HCT116 & IFITM3)")
-      
-      # サンプルグループ名
-      sample_group <- "hct116_ifitm3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, "deg_hct116_ifitm3.html")
-      
-      # グループ固有のプロットディレクトリとテーブルディレクトリを取得
-      group_plot_dir <- dir_paths$group_plot_dirs[[sample_group]]
-      group_table_dir <- dir_paths$group_table_dirs[[sample_group]]
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # deg_edgeR.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/deg_edgeR.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          input_se = se_object,
-          output_dir = dir_paths$report_dir,
-          plot_dir = group_plot_dir,
-          table_dir = group_table_dir,
-          filter_columns = list(cell_line = "HCT116", target_gene = "IFITM3"),
-          control = "scramble",
-          targets = c("sh1", "sh2"),
-          condition_column = "condition",
-          housekeeping_gene_set = "standard",
-          fdr_threshold = 0.05,
-          log2fc_threshold = 1
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("deg_edgeR.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", group_plot_dir)
-      flog.info("テーブル保存先: %s", group_table_dir)
-      
-      # レンダリング環境から結果のSEオブジェクトを取得
-      if (!exists("se", envir = render_env)) {
-        msg <- "deg_edgeR.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_se <- get("se", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_deg_hct116_ifitm3")
-      return(result_se)
-    }
+    name = obj_se_annotated,
+    command = run_with_logging( # ラッパー関数を使用
+      func = add_biomart_gene_info,
+      # --- add_biomart_gene_info の引数 ---
+      se = obj_se_raw, # ここで obj_se_raw を使用しているので依存関係は自動的に検出される
+      step_id = "add_biomart_gene_info",
+      experiment_id = experiment_id,
+      # --- run_with_logging の引数 ---
+      target_name = "obj_se_annotated", # ★ ターゲット名を渡す
+      exp_id = experiment_id, # ★ experiment_id を exp_id に変更
+      log_level = INFO
+    )
   ),
-  
-  # HCT116 & TAB3 のDEG解析
+
+  # 遺伝子タイプでサブセット化するターゲット (新規追加)
   tar_target(
-    name = rmd_deg_hct116_tab3,
-    command = {
-      dir_paths <- ensure_directories
-      se_object <- obj_se_raw
-      flog.info("ターゲット開始: rmd_deg_hct116_tab3 (DEG解析 HCT116 & TAB3)")
-      
-      # サンプルグループ名
-      sample_group <- "hct116_tab3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, "deg_hct116_tab3.html")
-      
-      # グループ固有のプロットディレクトリとテーブルディレクトリを取得
-      group_plot_dir <- dir_paths$group_plot_dirs[[sample_group]]
-      group_table_dir <- dir_paths$group_table_dirs[[sample_group]]
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # deg_edgeR.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/deg_edgeR.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          input_se = se_object,
-          output_dir = dir_paths$report_dir,
-          plot_dir = group_plot_dir,
-          table_dir = group_table_dir,
-          filter_columns = list(cell_line = "HCT116", target_gene = "TAB3"),
-          control = "scramble",
-          targets = c("sh1", "sh2"),
-          condition_column = "condition",
-          housekeeping_gene_set = "standard",
-          fdr_threshold = 0.05,
-          log2fc_threshold = 1
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("deg_edgeR.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", group_plot_dir)
-      flog.info("テーブル保存先: %s", group_table_dir)
-      
-      # レンダリング環境から結果のSEオブジェクトを取得
-      if (!exists("se", envir = render_env)) {
-        msg <- "deg_edgeR.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_se <- get("se", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_deg_hct116_tab3")
-      return(result_se)
-    }
+    name = obj_se_subset_protein_coding,
+    command = run_with_logging(
+      func = subset_gene,
+      # --- subset_gene の引数 ---
+      se = obj_se_annotated, # obj_se_annotated に依存
+      filter_conditions = list("gene_biotype == 'protein_coding'"),
+      # --- run_with_logging の引数 ---
+      target_name = "obj_se_subset_protein_coding",
+      exp_id = experiment_id,
+      log_level = INFO
+    )
   ),
-  
-  # SW620 & IFITM3 のDEG解析
+
+  # ライブラリサイズプロットを生成するターゲット (依存関係変更)
   tar_target(
-    name = rmd_deg_sw620_ifitm3,
-    command = {
-      dir_paths <- ensure_directories
-      se_object <- obj_se_raw
-      flog.info("ターゲット開始: rmd_deg_sw620_ifitm3 (DEG解析 SW620 & IFITM3)")
-      
-      # サンプルグループ名
-      sample_group <- "sw620_ifitm3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, "deg_sw620_ifitm3.html")
-      
-      # グループ固有のプロットディレクトリとテーブルディレクトリを取得
-      group_plot_dir <- dir_paths$group_plot_dirs[[sample_group]]
-      group_table_dir <- dir_paths$group_table_dirs[[sample_group]]
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # deg_edgeR.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/deg_edgeR.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          input_se = se_object,
-          output_dir = dir_paths$report_dir,
-          plot_dir = group_plot_dir,
-          table_dir = group_table_dir,
-          filter_columns = list(cell_line = "SW620", target_gene = "IFITM3"),
-          control = "scramble",
-          targets = c("sh1", "sh2"),
-          condition_column = "condition",
-          housekeeping_gene_set = "standard",
-          fdr_threshold = 0.05,
-          log2fc_threshold = 1
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("deg_edgeR.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", group_plot_dir)
-      flog.info("テーブル保存先: %s", group_table_dir)
-      
-      # レンダリング環境から結果のSEオブジェクトを取得
-      if (!exists("se", envir = render_env)) {
-        msg <- "deg_edgeR.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_se <- get("se", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_deg_sw620_ifitm3")
-      return(result_se)
-    }
+    name = file_plot_library_size,
+    command = run_with_logging(
+      func = plot_library_size,
+      # --- plot_library_size の引数 ---
+      se = obj_se_subset_protein_coding, # obj_se_subset_protein_coding に依存変更
+      assay_name = "counts", # 使用するアッセイを指定
+      output_dir = fs::path("results", experiment_id, "plots"),
+      experiment_id = experiment_id,
+      # --- run_with_logging の引数 ---
+      target_name = "file_plot_library_size",
+      exp_id = experiment_id,
+      log_level = INFO
+    ),
+    format = "file" # ファイルパスを返す
   ),
-  
-  # SW620 & TAB3 のDEG解析
+
+  # ログ密度プロット (counts アッセイ) を生成するターゲット (依存関係変更)
   tar_target(
-    name = rmd_deg_sw620_tab3,
-    command = {
-      dir_paths <- ensure_directories
-      se_object <- obj_se_raw
-      flog.info("ターゲット開始: rmd_deg_sw620_tab3 (DEG解析 SW620 & TAB3)")
-      
-      # サンプルグループ名
-      sample_group <- "sw620_tab3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, "deg_sw620_tab3.html")
-      
-      # グループ固有のプロットディレクトリとテーブルディレクトリを取得
-      group_plot_dir <- dir_paths$group_plot_dirs[[sample_group]]
-      group_table_dir <- dir_paths$group_table_dirs[[sample_group]]
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # deg_edgeR.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/deg_edgeR.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          input_se = se_object,
-          output_dir = dir_paths$report_dir,
-          plot_dir = group_plot_dir,
-          table_dir = group_table_dir,
-          filter_columns = list(cell_line = "SW620", target_gene = "TAB3"),
-          control = "scramble",
-          targets = c("sh1", "sh2"),
-          condition_column = "condition",
-          housekeeping_gene_set = "standard",
-          fdr_threshold = 0.05,
-          log2fc_threshold = 1
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("deg_edgeR.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", group_plot_dir)
-      flog.info("テーブル保存先: %s", group_table_dir)
-      
-      # レンダリング環境から結果のSEオブジェクトを取得
-      if (!exists("se", envir = render_env)) {
-        msg <- "deg_edgeR.Rmd の実行環境で 'se' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_se <- get("se", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_deg_sw620_tab3")
-      return(result_se)
-    }
+    name = file_plot_log_density,
+    command = run_with_logging(
+      func = plot_log_density,
+      # --- plot_log_density の引数 ---
+      se = obj_se_subset_protein_coding, # obj_se_subset_protein_coding に依存変更
+      assay_name = "counts", # 使用するアッセイを指定
+      output_dir = fs::path("results", experiment_id, "plots"),
+      experiment_id = experiment_id,
+      # --- run_with_logging の引数 ---
+      target_name = "file_plot_log_density",
+      exp_id = experiment_id,
+      log_level = INFO
+    ),
+    format = "file" # ファイルパスを返す
   ),
-  
-  # IFITM3 遺伝子のHCT116とSW620間の共通DEG解析（UpSetプロット）
+
+  # ヒートマップ (protein_coding, counts) を生成するターゲット (新規追加)
   tar_target(
-    name = rmd_upset_ifitm3,
-    command = {
-      dir_paths <- ensure_directories
-      flog.info("ターゲット開始: rmd_upset_ifitm3 (IFITM3 DEG CSVファイルのUpSet解析)")
-      
-      # グループ名（出力ファイル名に使用）
-      group_name <- "ifitm3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, paste0("upset_", group_name, ".html"))
-      
-      # 入力ディレクトリを設定
-      result_dirs <- list(
-        hct116_ifitm3 = fs::path(table_dir_path, "deg_edgeR", "hct116_ifitm3"),
-        sw620_ifitm3 = fs::path(table_dir_path, "deg_edgeR", "sw620_ifitm3")
-      )
-      
-      # 特定のCSVファイルのみを対象とするための専用ディレクトリを作成
-      tmp_ifitm3_dir <- fs::path(table_dir_path, "upset_deg_results", "tmp_ifitm3")
-      fs::dir_create(tmp_ifitm3_dir, recurse = TRUE)
-      
-      # HCT116_IFITM3の各CSVファイルへのパス
-      hct116_ifitm3_sh1_path <- fs::path(result_dirs$hct116_ifitm3, "deg_sh1_vs_scramble.csv")
-      hct116_ifitm3_sh2_path <- fs::path(result_dirs$hct116_ifitm3, "deg_sh2_vs_scramble.csv")
-      
-      # SW620_IFITM3の各CSVファイルへのパス
-      sw620_ifitm3_sh1_path <- fs::path(result_dirs$sw620_ifitm3, "deg_sh1_vs_scramble.csv")
-      sw620_ifitm3_sh2_path <- fs::path(result_dirs$sw620_ifitm3, "deg_sh2_vs_scramble.csv")
-      
-      # 新しいディレクトリにCSVファイルをコピー（シンボリックリンクも可）
-      fs::file_copy(hct116_ifitm3_sh1_path, fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh1.csv"), overwrite = TRUE)
-      fs::file_copy(hct116_ifitm3_sh2_path, fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh2.csv"), overwrite = TRUE)
-      fs::file_copy(sw620_ifitm3_sh1_path, fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh1.csv"), overwrite = TRUE)
-      fs::file_copy(sw620_ifitm3_sh2_path, fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh2.csv"), overwrite = TRUE)
-      
-      # 新しい一時ディレクトリを入力として使用
-      # 修正: 2つ以上のディレクトリを提供する
-      result_dirs <- list(
-        hct116_ifitm3_files = fs::path(tmp_ifitm3_dir, "hct116_ifitm3_sh1.csv"),
-        sw620_ifitm3_files = fs::path(tmp_ifitm3_dir, "sw620_ifitm3_sh1.csv")
-      )
-      
-      # 各入力ディレクトリの存在を確認
-      for (name in names(result_dirs)) {
-        dir_path <- result_dirs[[name]]
-        if (!fs::dir_exists(dir_path) && !fs::file_exists(dir_path)) {
-          msg <- sprintf("パスが存在しません: %s", dir_path)
-          flog.error(msg)
-          stop(msg)
-        }
-      }
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # upset_deg_results.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/upset_deg_results.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          result_dirs = result_dirs,
-          output_dir = dir_paths$report_dir,
-          plot_dir = dir_paths$upset_plot_dir,
-          table_dir = dir_paths$upset_table_dir,
-          group_name = group_name,
-          gene_id_column = "gene_name"
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("upset_deg_results.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", dir_paths$upset_plot_dir)
-      flog.info("テーブル保存先: %s", dir_paths$upset_table_dir)
-      
-      # 一時ディレクトリを削除（オプション）
-      # fs::dir_delete(tmp_ifitm3_dir)
-      
-      # レンダリング環境から結果を取得
-      if (!exists("result", envir = render_env)) {
-        msg <- "upset_deg_results.Rmd の実行環境で 'result' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_object <- get("result", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_upset_ifitm3")
-      return(result_object)
-    }
+    name = file_heatmap_protein_coding_counts,
+    command = run_with_logging(
+      func = plot_heatmap,
+      # --- plot_heatmap の引数 ---
+      se = obj_se_subset_protein_coding, # obj_se_subset_protein_coding に依存
+      assay_name = "counts",
+      annotation_cols = c("Group"), # "Group" 列でアノテーション (存在しない場合は NULL に変更)
+      output_dir = fs::path("results", experiment_id, "plots"),
+      filename_prefix = "heatmap_protein_coding_counts",
+      # --- run_with_logging の引数 ---
+      target_name = "file_heatmap_protein_coding_counts",
+      exp_id = experiment_id,
+      log_level = INFO
+    ),
+    format = "file" # ファイルパスを返す
   ),
-  
-  # TAB3 遺伝子のHCT116とSW620間の共通DEG解析（UpSetプロット）
-  tar_target(
-    name = rmd_upset_tab3,
-    command = {
-      dir_paths <- ensure_directories
-      flog.info("ターゲット開始: rmd_upset_tab3 (TAB3 DEG CSVファイルのUpSet解析)")
-      
-      # グループ名（出力ファイル名に使用）
-      group_name <- "tab3"
-      
-      # 出力パスを構築
-      output_path <- fs::path(dir_paths$report_dir, paste0("upset_", group_name, ".html"))
-      
-      # 入力ディレクトリを設定
-      result_dirs <- list(
-        hct116_tab3 = fs::path(table_dir_path, "deg_edgeR", "hct116_tab3"),
-        sw620_tab3 = fs::path(table_dir_path, "deg_edgeR", "sw620_tab3")
-      )
-      
-      # 特定のCSVファイルのみを対象とするための専用ディレクトリを作成
-      tmp_tab3_dir <- fs::path(table_dir_path, "upset_deg_results", "tmp_tab3")
-      fs::dir_create(tmp_tab3_dir, recurse = TRUE)
-      
-      # HCT116_TAB3の各CSVファイルへのパス
-      hct116_tab3_sh1_path <- fs::path(result_dirs$hct116_tab3, "deg_sh1_vs_scramble.csv")
-      hct116_tab3_sh2_path <- fs::path(result_dirs$hct116_tab3, "deg_sh2_vs_scramble.csv")
-      
-      # SW620_TAB3の各CSVファイルへのパス
-      sw620_tab3_sh1_path <- fs::path(result_dirs$sw620_tab3, "deg_sh1_vs_scramble.csv")
-      sw620_tab3_sh2_path <- fs::path(result_dirs$sw620_tab3, "deg_sh2_vs_scramble.csv")
-      
-      # 新しいディレクトリにCSVファイルをコピー（シンボリックリンクも可）
-      fs::file_copy(hct116_tab3_sh1_path, fs::path(tmp_tab3_dir, "hct116_tab3_sh1.csv"), overwrite = TRUE)
-      fs::file_copy(hct116_tab3_sh2_path, fs::path(tmp_tab3_dir, "hct116_tab3_sh2.csv"), overwrite = TRUE)
-      fs::file_copy(sw620_tab3_sh1_path, fs::path(tmp_tab3_dir, "sw620_tab3_sh1.csv"), overwrite = TRUE)
-      fs::file_copy(sw620_tab3_sh2_path, fs::path(tmp_tab3_dir, "sw620_tab3_sh2.csv"), overwrite = TRUE)
-      
-      # 新しい一時ディレクトリを入力として使用
-      # 修正: 2つ以上のディレクトリを提供する
-      result_dirs <- list(
-        hct116_tab3_files = fs::path(tmp_tab3_dir, "hct116_tab3_sh1.csv"),
-        sw620_tab3_files = fs::path(tmp_tab3_dir, "sw620_tab3_sh1.csv")
-      )
-      
-      # 各入力ディレクトリの存在を確認
-      for (name in names(result_dirs)) {
-        dir_path <- result_dirs[[name]]
-        if (!fs::dir_exists(dir_path) && !fs::file_exists(dir_path)) {
-          msg <- sprintf("パスが存在しません: %s", dir_path)
-          flog.error(msg)
-          stop(msg)
-        }
-      }
-      
-      # レンダリング環境を作成
-      render_env <- new.env()
-      
-      # upset_deg_results.Rmdをレンダリング
-      rmarkdown::render(
-        input = fs::path_abs("Rmd/upset_deg_results.Rmd"),
-        output_file = output_path,
-        output_format = common_output_format,
-        output_options = rmd_output_options,
-        params = list(
-          experiment_id = experiment_id,
-          result_dirs = result_dirs,
-          output_dir = dir_paths$report_dir,
-          plot_dir = dir_paths$upset_plot_dir,
-          table_dir = dir_paths$upset_table_dir,
-          group_name = group_name,
-          gene_id_column = "gene_name"
-        ),
-        envir = render_env,
-        quiet = TRUE,
-        knit_root_dir = fs::path_abs(".")
-      )
-      
-      flog.info("upset_deg_results.Rmd のレンダリング完了: %s", output_path)
-      flog.info("プロット保存先: %s", dir_paths$upset_plot_dir)
-      flog.info("テーブル保存先: %s", dir_paths$upset_table_dir)
-      
-      # 一時ディレクトリを削除（オプション）
-      # fs::dir_delete(tmp_tab3_dir)
-      
-      # レンダリング環境から結果を取得
-      if (!exists("result", envir = render_env)) {
-        msg <- "upset_deg_results.Rmd の実行環境で 'result' オブジェクトが見つかりません。"
-        flog.fatal(msg)
-        stop(msg)
-      }
-      result_object <- get("result", envir = render_env)
-      
-      flog.info("ターゲット完了: rmd_upset_tab3")
-      return(result_object)
-    }
+
+  # SE 基本情報 Rmd をレンダリングするターゲット (依存関係はRmd内で解決)
+  tarchetypes::tar_render(
+    name = rmd_se_basic_info,
+    path = "Rmd/se_basic_info.Rmd",
+    output_file = "se_basic_info.html",
+    output_dir = fs::path("results", experiment_id, "reports"),
+    params = list(
+      experiment_id = experiment_id
+    )
   )
 )

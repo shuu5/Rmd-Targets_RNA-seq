@@ -1,0 +1,58 @@
+
+次のパッケージを付け加えます: ‘rlang’
+
+以下のオブジェクトは ‘package:data.table’ からマスクされています:
+
+    :=
+
+以下のオブジェクトは ‘package:Biobase’ からマスクされています:
+
+    exprs
+
+        R/add_biomart_gene_info.R R/create_se_object.R R/plot_library_size.R
+value   ?                         ?                    ?                    
+visible FALSE                     FALSE                FALSE                
+        R/plot_log_density.R R/subset_sample.R R/utility.R
+value   ?                    ?                 ?          
+visible FALSE                FALSE             FALSE      
+
+次のパッケージを付け加えます: ‘testthat’
+
+以下のオブジェクトは ‘package:rlang’ からマスクされています:
+
+    is_false, is_null, is_true
+
+
+══ Testing test-subset_sample.R ════════════════════════════════════════════════
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]INFO [2025-04-25 16:40:41] [test_subset_logger] Starting sample subsetting using column 'treatment' (primarily for context/naming) with condition: control
+INFO [2025-04-25 16:40:41] [test_subset_logger] Subset condition evaluated. Result: 4 out of 6 samples selected (66.7%).
+INFO [2025-04-25 16:40:41] [test_subset_logger] Sample subsetting completed. Returning SE object with 10 features and 4 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 4 ]INFO [2025-04-25 16:40:41] [test_subset_numeric] Starting sample subsetting using column 'value' (primarily for context/naming) with condition: value > 10
+INFO [2025-04-25 16:40:41] [test_subset_numeric] Subset condition evaluated. Result: 3 out of 6 samples selected (50.0%).
+INFO [2025-04-25 16:40:41] [test_subset_numeric] Sample subsetting completed. Returning SE object with 10 features and 3 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 5 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 6 ]INFO [2025-04-25 16:40:41] [test_subset_logical] Starting sample subsetting using column 'treatment' (primarily for context/naming) with condition: treatment == 'treated' & batch == 'A'
+INFO [2025-04-25 16:40:41] [test_subset_logical] Subset condition evaluated. Result: 1 out of 6 samples selected (16.7%).
+INFO [2025-04-25 16:40:41] [test_subset_logical] Sample subsetting completed. Returning SE object with 10 features and 1 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 7 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 8 ]INFO [2025-04-25 16:40:41] [test_subset_auto_name] Starting sample subsetting using column 'treatment' (primarily for context/naming) with condition: control
+INFO [2025-04-25 16:40:41] [test_subset_auto_name] Subset condition evaluated. Result: 4 out of 6 samples selected (66.7%).
+INFO [2025-04-25 16:40:41] [test_subset_auto_name] Sample subsetting completed. Returning SE object with 10 features and 4 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]INFO [2025-04-25 16:40:41] [test_subset_auto_name] Starting sample subsetting using column 'value' (primarily for context/naming) with condition: value > 10
+INFO [2025-04-25 16:40:41] [test_subset_auto_name] Subset condition evaluated. Result: 3 out of 6 samples selected (50.0%).
+INFO [2025-04-25 16:40:41] [test_subset_auto_name] Sample subsetting completed. Returning SE object with 10 features and 3 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 10 ]INFO [2025-04-25 16:40:41] [test_subset_provided_name] Starting sample subsetting using column 'treatment' (primarily for context/naming) with condition: control
+INFO [2025-04-25 16:40:41] [test_subset_provided_name] Subset condition evaluated. Result: 4 out of 6 samples selected (66.7%).
+INFO [2025-04-25 16:40:41] [test_subset_provided_name] Sample subsetting completed. Returning SE object with 10 features and 4 samples.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 11 ] Done!

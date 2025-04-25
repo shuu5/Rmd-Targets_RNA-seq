@@ -65,7 +65,7 @@ case "$COMMAND" in
   all)
     ensure_log_dir
     echo "すべてのテストを実行中..."
-    Rscript -e "testthat::test_dir('tests/testthat', $*)" 2>&1 | tee "tests/logs/test_all_latest.log"
+    Rscript -e "sapply(list.files('R', pattern='\\\\.R$', full.names=TRUE), source); testthat::test_dir('tests/testthat', $*)" 2>&1 | tee "tests/logs/test_all_latest.log"
     exit_status=$?
     if [ $exit_status -eq 0 ]; then
       echo "すべてのテストが成功しました。"
@@ -95,7 +95,8 @@ case "$COMMAND" in
     
     echo "テストファイル '$test_file' を実行中..."
     file_basename=$(basename "$test_file")
-    Rscript -e "testthat::test_file('$test_file', $*)" 2>&1 | tee "tests/logs/test_${file_basename%.*}_latest.log"
+    # R関数をロードしてからテストを実行 (R/ 内の全 .R ファイルを source する)
+    Rscript -e "sapply(list.files('R', pattern='\\\\.R$', full.names=TRUE), source); testthat::test_file('$test_file', $*)" 2>&1 | tee "tests/logs/test_${file_basename%.*}_latest.log"
     exit_status=$?
     if [ $exit_status -eq 0 ]; then
       echo "テストが成功しました。"
@@ -120,7 +121,8 @@ case "$COMMAND" in
     
     echo "ディレクトリ '$test_dir' のテストを実行中..."
     dir_basename=$(basename "$test_dir")
-    Rscript -e "testthat::test_dir('$test_dir', $*)" 2>&1 | tee "tests/logs/test_dir_${dir_basename}_latest.log"
+    # R関数をロードしてからテストを実行
+    Rscript -e "sapply(list.files('R', pattern='\\\\.R$', full.names=TRUE), source); testthat::test_dir('$test_dir', $*)" 2>&1 | tee "tests/logs/test_dir_${dir_basename}_latest.log"
     exit_status=$?
     if [ $exit_status -eq 0 ]; then
       echo "テストが成功しました。"
@@ -138,7 +140,8 @@ case "$COMMAND" in
   snapshot)
     ensure_log_dir
     echo "スナップショットテストを更新中..."
-    Rscript -e "testthat::test_dir('tests/testthat', $*)" 2>&1 | tee "tests/logs/snapshot_update_latest.log"
+    # R関数をロードしてからテストを実行
+    Rscript -e "sapply(list.files('R', pattern='\\\\.R$', full.names=TRUE), source); testthat::test_dir('tests/testthat', $*)" 2>&1 | tee "tests/logs/snapshot_update_latest.log"
     exit_status=$?
     if [ $exit_status -eq 0 ]; then
       echo "スナップショットテストが更新されました。"

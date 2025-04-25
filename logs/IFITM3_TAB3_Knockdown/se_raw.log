@@ -1,0 +1,8 @@
+INFO [2025-04-25 17:07:28] create_se_object 関数を開始します。
+INFO [2025-04-25 17:07:28] カウントデータを読み込みます: data/IFITM3_TAB3_Knockdown/counts.csv
+INFO [2025-04-25 17:07:28] メタデータを読み込みます: data/IFITM3_TAB3_Knockdown/sample_metadata.csv
+INFO [2025-04-25 17:07:28] カウントデータとメタデータのサンプルIDの一致を確認します。
+INFO [2025-04-25 17:07:28] SummarizedExperiment オブジェクトを作成します。
+INFO [2025-04-25 17:07:28] メタデータを追加します (sessionInfo, input_files, pipeline_history)。
+INFO [2025-04-25 17:07:29] SummarizedExperiment オブジェクトが正常に作成されました (62700 行, 12 列)。
+INFO [2025-04-25 17:07:29] create_se_object 関数を終了します。

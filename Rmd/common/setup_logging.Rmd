@@ -1,0 +1,88 @@
+```{r setup_logging, include=FALSE}
+# Rmdファイル用の共通ロギング設定 (チャイルドドキュメント)
+# 各Rmdファイルで ```{r setup, include=FALSE, child="Rmd/common/setup_logging.Rmd"}``` のようにしてインクルードします。
+
+# ライブラリロード (重複ロードは無視される)
+suppressPackageStartupMessages({
+  library(targets)
+  library(futile.logger)
+  library(fs)
+})
+
+# experiment_id パラメータの取得
+# paramsオブジェクトが存在するか確認し、存在しない場合はtargetsのオプションから取得
+if (!exists("params") || is.null(params$experiment_id)) {
+  current_experiment_id <- getOption("TARGETS_EXPERIMENT_ID", default = "default_experiment")
+  # 警告を出す（通常はparamsで渡されるべき）
+  futile.logger::flog.warn(
+    "Rmd パラメータ 'experiment_id' が見つかりません。targetsオプション '%s' を使用します。",
+    current_experiment_id,
+    name = "ROOT" # setup_rmd_logging が呼ばれる前の可能性があるので ROOT ロガーを使う
+  )
+} else {
+  current_experiment_id <- params$experiment_id
+}
+
+# R/utility.R が tar_source() で読み込まれている前提
+# setup_rmd_logging 関数を呼び出してロガー名を取得し、ログファイルを設定
+if (!exists("setup_rmd_logging")) {
+  # 本来ここには到達しないはず (tar_sourceが機能していれば)
+  error_msg <- "setup_rmd_logging 関数が見つかりません。R/utility.R が targets パイプラインで読み込まれているか確認してください。"
+  futile.logger::flog.error(error_msg, name = "ROOT")
+  # ダミーのロガー名を設定してエラーを回避しようとする（ただしログは機能しない）
+  logger_name_rmd <- "error_logger_setup"
+  # ダミーのログ関数も定義
+  log_info <- log_debug <- log_trace <- log_warn <- log_error <- function(msg, ...) message(paste("[", logger_name_rmd, "]:", msg))
+} else {
+  current_rmd_path <- knitr::current_input()
+  rmd_basename <- tools::file_path_sans_ext(basename(current_rmd_path))
+  target_name <- paste0("rmd_", rmd_basename) # 推定ターゲット名
+
+  # ROOT ロガーにも開始ログを出力
+  log_file_rmd_rel <- fs::path_rel(fs::path("logs", current_experiment_id, paste0(rmd_basename, ".log")))
+  futile.logger::flog.info(
+    "Starting Rmd target '%s' (Log: %s)", 
+    target_name, 
+    log_file_rmd_rel, 
+    name = "ROOT"
+  )
+  
+  # utility関数を呼び出して個別ロガー設定＆ロガー名取得
+  logger_name_rmd <- setup_rmd_logging(experiment_id = current_experiment_id, rmd_path = current_rmd_path)
+  
+  # ロギング用ラッパー関数定義 (setup_rmd_loggingが成功した場合のみ定義)
+  log_info <- function(msg, ...) {
+    futile.logger::flog.info(sprintf(msg, ...), name = logger_name_rmd)
+  }
+  log_debug <- function(msg, ...) {
+    futile.logger::flog.debug(sprintf(msg, ...), name = logger_name_rmd)
+  }
+  log_trace <- function(msg, ...) {
+    futile.logger::flog.trace(sprintf(msg, ...), name = logger_name_rmd)
+  }
+  log_warn <- function(msg, ...) {
+    futile.logger::flog.warn(sprintf(msg, ...), name = logger_name_rmd)
+  }
+  log_error <- function(msg, ...) {
+    futile.logger::flog.error(sprintf(msg, ...), name = logger_name_rmd)
+  }
+  
+  # 個別ログに開始メッセージ
+  log_info("Rmdファイル '%s' のロギング設定完了 (ログファイル: %s)", 
+           basename(current_rmd_path), log_file_rmd_rel)
+}
+
+# knitrオプション設定 (child ドキュメントでも設定しておく)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  error = TRUE # エラー時に停止させる (FALSEだとエラー箇所を飛ばしてレンダリング継続する可能性)
+)
+
+# ドキュメント終了時のログフックは不安定なため削除
+# 終了は targets のログやメタデータで確認する
+
+# logger_name_rmd をグローバル環境に置く（非推奨だがデバッグ用に役立つ可能性）
+.GlobalEnv$current_rmd_logger_name <- logger_name_rmd
+```

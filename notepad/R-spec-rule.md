@@ -1,0 +1,188 @@
+# Rモジュール仕様書 作成ルール
+
+## 1. 基本方針
+- **目的:** Rディレクトリ内の各関数について、その設計意図、機能、利用方法を明確に文書化し、開発効率、保守性、再利用性を向上させる。
+- **対象:** `R/` ディレクトリに格納されるすべてのR関数（ユーティリティ関数含む）。
+- **連携:** このルールは `project-rule.md` を補完するものであり、両方のルールに従うこと。
+- **形式:** Markdown形式 (`.md`) で記述する。
+- **タイミング:** 原則として、関数実装 **前** (TDDの Red フェーズの前) に作成または更新する。
+
+## 2. ファイル命名と保存場所
+- **ファイル名:** 仕様書対象のR関数名に対応させ、`spec_{関数名}.md` とする。(例: `spec_normalize_counts.md`, `spec_plot_pca.md`)
+- **保存場所:** `specs/R/` ディレクトリを作成し、その下に格納する。 (例: `specs/R/spec_normalize_counts.md`)
+
+## 3. 仕様書テンプレートと必須項目
+- 各仕様書は以下のセクションを含むこと。
+
+```markdown
+# R関数仕様書: {関数名}
+
+## 1. 概要
+- **目的:** この関数が解決する課題や達成する目標を簡潔に記述する。
+- **機能:** この関数が具体的に何を行うのかを要約して記述する。
+- **作成日:** YYYY-MM-DD
+- **更新日:** YYYY-MM-DD
+
+## 2. 機能詳細
+- この関数が持つ主要な機能や特徴を箇条書きなどで詳細に説明する。
+- 関連するアルゴリズムや計算ロジックがあれば言及する。
+- `project-rule.md` のどの解析ステップに対応するかを明記する。
+
+## 3. 入力 (Arguments)
+- 関数の各引数について、以下の情報をテーブル形式またはリスト形式で記述する。
+    - **引数名:**
+    - **データ型:** (例: `SummarizedExperiment`, `data.frame`, `character`, `numeric`, `logical`, `fs::path`)
+    - **説明:** 引数の内容、期待される形式、制約などを具体的に記述する。
+    - **必須/任意:** 引数が必須か任意かを示す。
+    - **デフォルト値:** 任意引数の場合のデフォルト値。
+
+## 4. 出力 (Return Value)
+- 関数の戻り値について記述する。
+    - **データ型:** (例: `SummarizedExperiment`, `data.frame`, `ggplot`, `fs::path`, `invisible(NULL)`)
+    - **説明:** 戻り値の内容、構造、意味を具体的に記述する。
+    - **ファイル出力:** ファイルを生成する場合 (`project-rule.md` の `file_...` ターゲットに対応する場合など)、以下の情報も記述する。
+        - **ファイルパス:** 生成されるファイルの命名規則と保存場所のルール (`results/{experiment_id}/...` など)。**必ず絶対パスを使用してファイルを保存し、絶対パスを返却すること。**
+        - **ファイル形式:** (例: `PNG`, `CSV`, `RDS`)
+        - **ファイル内容:** ファイルに格納されるデータの概要。
+
+## 5. 処理フロー / 主要ステップ
+- 関数内部の主要な処理ステップを順に記述する。
+- 条件分岐やループなど、重要な制御構造についても言及する。
+- 複雑な場合は、簡単なフローチャートや疑似コードを記述しても良い。
+- `SummarizedExperiment` オブジェクトを操作する場合、どの `assay`, `colData`, `rowData`, `metadata` を読み書きするかを明記する。
+
+## 6. 副作用 (Side Effects)
+- 関数実行によって、戻り値以外に影響を与える要素があれば記述する。
+    - **ファイルI/O:** 指定されたパスへのファイル書き込みなど。
+    - **オブジェクト変更:** 入力オブジェクトが直接変更される場合 (通常は避けるべきだが、必要な場合)。
+    - **`options()` や環境変数の変更:** (原則として避ける)
+    - **`SummarizedExperiment` のメタデータ更新:** `metadata()$pipeline_history` への記録内容 (`project-rule.md` 参照)。
+        - **推奨フォーマット:** `pipeline_history` はリストであり、各要素が1つの処理ステップを表すリストとなる。各ステップのリストには以下のキーを含むことを推奨する。
+            - `step_id`: 処理ステップの一意識別子（例: `targets` のターゲット名や連番）。データ型: `character` または `numeric`。
+            - `function_name`: 実行されたR関数の名前。データ型: `character`。
+            - `timestamp`: 処理実行時のタイムスタンプ (`Sys.time()`)。データ型: `POSIXct`。
+            - `parameters`: 関数に渡された主要な引数のリスト。データ型: `list`。 (機密情報や巨大なオブジェクトは含めないように注意)
+            - `input_dimensions`: (該当する場合) 入力SEオブジェクトの次元 (`list(rows = ..., cols = ...)` など)。データ型: `list`。
+            - `output_dimensions`: (該当する場合) 出力SEオブジェクトの次元 (`list(rows = ..., cols = ...)` など)。データ型: `list`。
+            - `details`: 処理内容に関する簡単な説明やメモ（任意）。データ型: `character`。
+        - 例:
+          ```R
+          history_entry <- list(
+            step_id = "obj_create_se", # targets ターゲット名
+            function_name = "create_se_object",
+            timestamp = Sys.time(),
+            parameters = list(experiment_id = eid, data_dir = ddir),
+            input_dimensions = NULL, # 初期作成のため入力SEなし
+            output_dimensions = list(rows = nrow(se), cols = ncol(se)),
+            details = "Initial SE object creation from CSV."
+          )
+          metadata(se)$pipeline_history <- c(metadata(se)$pipeline_history, list(history_entry))
+          ```
+    - **パイプライン履歴の実装例:** 共通関数 `add_pipeline_history` を使用する実装例:
+      ```R
+      # SEオブジェクトのメタデータ更新処理
+      se <- add_pipeline_history(
+        se = se,
+        step_id = "obj_normalize_counts",
+        function_name = "normalize_counts",
+        parameters = list(method = method, reference_sample = ref_sample),
+        details = sprintf("%s法による正規化を実施。リファレンスサンプル: %s", method, ref_sample),
+        logger_name = logger_name
+      )
+      # 上記関数は内部で以下のようなコードを実行する
+      # history_entry作成とmetadata()$pipeline_historyへの追加
+      # タイムスタンプ自動記録、入出力次元の自動取得など
+      ```
+
+## 7. ログ仕様 (`futile.logger`)
+- `project-rule.md` のロギング方針に基づき、この関数が出力する主要なログメッセージを記述する。
+- **ログレベル:** 各メッセージのログレベル (`INFO`, `DEBUG`, `WARN`, `ERROR`) を明記する。
+- **ログ内容:** 関数開始/終了、主要ステップの実行、入力パラメータ、生成ファイルパス、エラー発生箇所などを具体的に記述する。
+- **ログファイル名:** `logs/{experiment_id}/{関数名}.log` に出力されることを明記。
+- **R関数でのログ実装例:**
+  ```R
+  my_function <- function(param1, param2, ..., logger_name) {
+    # 関数開始時のログ記録
+    flog.info("関数開始: パラメータ %s, %s", param1, param2, name = logger_name)
+    
+    # パラメータ検証
+    if (is.null(param1)) {
+      flog.warn("param1がNULLです。デフォルト値を使用します。", name = logger_name)
+      param1 <- "default_value"
+    }
+    
+    # 主要処理ステップのログ記録
+    flog.debug("処理ステップ1開始", name = logger_name)
+    # 処理コード...
+    flog.trace("中間計算結果: %s", result1, name = logger_name)
+    
+    # エラーハンドリングとログ記録
+    tryCatch({
+      # 処理コード...
+    }, error = function(e) {
+      flog.error("エラー発生: %s", conditionMessage(e), name = logger_name)
+      stop(e)
+    })
+    
+    # SEオブジェクト更新時
+    se <- add_pipeline_history(
+      se, 
+      step_id = target_name, 
+      "my_function", 
+      parameters = list(param1 = param1, param2 = param2), 
+      details = "処理内容", 
+      logger_name = logger_name
+    )
+    
+    # 関数終了時のログ記録
+    flog.info("関数終了: %d行のデータを処理", nrow(result), name = logger_name)
+    return(result)
+  }
+  ```
+
+- **Rmdファイルでのログ実装例:**
+  ```R
+  ---
+  title: "レポート"
+  params:
+    experiment_id: !r getOption("TARGETS_EXPERIMENT_ID", "default_experiment")
+  ---
+  
+  ```{r setup, include=FALSE, child="Rmd/common/setup_logging.Rmd"}
+  ```
+  
+  ```{r data_load}
+  data <- tar_read(obj_data)
+  log_info("データ読み込み完了: %d行", nrow(data))
+  
+  se <- tar_read(obj_se_normalized)
+  log_info("正規化済みSEオブジェクト読み込み: %d genes x %d samples", nrow(se), ncol(se))
+  ```
+  
+  ```{r plot_display, fig.cap="PCA plot of normalized data"}
+  pca_plot_path <- tar_read(file_plot_pca)
+  log_debug("PCAプロットファイルパス: %s", pca_plot_path)
+  
+  if (file.exists(pca_plot_path)) {
+    knitr::include_graphics(pca_plot_path)
+    log_info("PCAプロット表示")
+  } else {
+    log_warn("PCAプロットファイルが存在しません: %s", pca_plot_path)
+  }
+  ```
+  ```
+
+## 8. テストケース (`testthat`)
+- `project-rule.md` のTDD原則に基づき、この関数に対して実施するテストケースを記述する。
+- **テストファイル:** `tests/testthat/test-{関数名}.R` に対応することを示す。
+- **テスト項目:**
+    - **正常系:** 期待される入力に対する正常な出力（戻り値、生成ファイル）を確認するケース。
+        - 例: 主要なパラメータの組み合わせ、境界値。
+    - **異常系:** 不正な入力や予期せぬ状況に対するエラーハンドリングや警告を確認するケース。
+        - 例: 型不一致、必須引数欠損、ファイル不存在、ゼロ除算など。
+    - **副作用:** ファイルが正しく生成/更新されるか、メタデータが記録されるかなどを確認するケース。
+- **テストデータ:** `tests/testdata/{関数名}/` に配置するテストデータの概要。
+
+## 9. 依存関係
+- この関数が依存する他のR関数（自作ユーティリティ関数など）や、特定のパッケージ（`library()`で読み込むもの）をリストアップする。
+- `renv` で管理されていることを前提とする。

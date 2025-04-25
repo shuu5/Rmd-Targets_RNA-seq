@@ -1,0 +1,11 @@
+INFO [2025-04-25 18:05:35] 関数 plot_heatmap 開始: assay='counts', output='results/IFITM3_TAB3_Knockdown/plots/heatmap_protein_coding_counts*.png'
+INFO [2025-04-25 18:05:35] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 18:05:35] アッセイ 'counts' のデータで行分散を計算し、上位遺伝子を選択します。
+INFO [2025-04-25 18:05:35] 分散上位 100 個の遺伝子を選択します。
+INFO [2025-04-25 18:05:35] log2(count + 1) 変換を実行します (フィルタリング後)。
+INFO [2025-04-25 18:05:35] 列アノテーションを準備します: [Group]
+WARN [2025-04-25 18:05:35] 指定されたアノテーション列のうち、colData に存在しないものがあります: [Group]
+WARN [2025-04-25 18:05:35] 有効なアノテーション列が見つからなかったため、アノテーションは使用されません。
+INFO [2025-04-25 18:05:35] ヒートマップをファイルに保存します: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/heatmap_protein_coding_counts_top100var.png
+INFO [2025-04-25 18:05:36] ヒートマップの保存が完了しました: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/heatmap_protein_coding_counts_top100var.png
+INFO [2025-04-25 18:05:36] 関数 plot_heatmap 終了

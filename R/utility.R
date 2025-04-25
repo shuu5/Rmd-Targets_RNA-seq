@@ -1,151 +1,150 @@
-# utility.R - RNA-seq パイプラインのための共通ユーティリティ関数
+# R/utility.R または R/logging_utils.R に追加
 
-#' 2つのファイルアペンダーに書き込むカスタムアペンダー関数
-#' 
-#' futile.logger はデフォルトで複数のファイルアペンダーを直接サポートしないため、
-#' この関数はメッセージを受け取り、指定された2つのファイルアペンダーに書き込みます。
-#' 
-#' @param file1_appender 1つ目の appender.file() で作成されたアペンダー関数
-#' @param file2_appender 2つ目の appender.file() で作成されたアペンダー関数
-#' @return futile.logger が期待するアペンダー関数
-appender_tee_custom <- function(file1_appender, file2_appender) {
-  if (!is.function(file1_appender) || !is.function(file2_appender)) {
-    stop("両方の引数は appender.file によって返される関数である必要があります")
-  }
-  function(line) {
-    # 各アペンダー関数を実行してファイルに書き込む
-    tryCatch(file1_appender(line), error = function(e) {
-      warning(sprintf("カスタムTeeアペンダー(ファイル1)での書き込みエラー: %s", e$message))
-    })
-    tryCatch(file2_appender(line), error = function(e) {
-      warning(sprintf("カスタムTeeアペンダー(ファイル2)での書き込みエラー: %s", e$message))
-    })
-  }
-}
-
-#' ロガーを設定する関数
+#' 関数実行前に専用のログファイルを設定し、関数を実行するラッパー
 #'
-#' 指定されたモジュール名のログファイルと_targets.logの両方にログを出力するように設定します。
-#' モジュール名はログメッセージの一部として含まれ、ソースを識別しやすくします。
+#' @param func 実行する関数オブジェクト
+#' @param ... func に渡す引数
+#' @param target_name targetsでのターゲット名（ログファイル名に使用）
+#' @param exp_id 実験ID
+#' @param log_level 個別ログファイルのログレベル (例: futile.logger::TRACE)
 #'
-#' @param experiment_id 実験ID (例: "250418_RNA-seq")
-#' @param module_name モジュール名 (例: "create_se")
-#' @param log_level ログレベル (デフォルト: "TRACE")
-#' @return ロガー設定（アペンダー、レイアウト、閾値）を含むリスト
-#' @examples
-#' logger_settings <- setup_logger(params$experiment_id, "create_se")
-#' futile.logger::flog.appender(logger_settings$appender)
-#' futile.logger::flog.layout(logger_settings$layout)
-#' futile.logger::flog.threshold(logger_settings$threshold)
-#' futile.logger::flog.info("ロガー設定適用完了")
-setup_logger <- function(experiment_id, module_name, log_level = "TRACE") {
-  # library(futile.logger) # 関数内でロードする必要はなくなる
-  library(fs)
-  library(here)
+#' @return func の実行結果
+run_with_logging <- function(func, ..., target_name, exp_id, log_level = futile.logger::TRACE) {
+  # ロガー名とログファイルパスをターゲット名から生成
+  # "obj_" や "file_" プレフィックスを除去して関数名に近いものにする
+  clean_target_name <- sub("^(obj|file)_", "", target_name)
+  logger_name <- paste0("log_", clean_target_name)
+  log_dir_func <- fs::path("logs", exp_id)
+  fs::dir_create(log_dir_func)
+  log_file_func <- fs::path(log_dir_func, paste0(clean_target_name, ".log"))
 
-  # ログディレクトリを確認・作成
-  # すべてのケースで logs/{experiment_id} に出力する
-  log_dir <- fs::path("logs", experiment_id)
-  
-  if (!fs::dir_exists(log_dir)) {
-    fs::dir_create(log_dir, recurse = TRUE)
-  }
-
-  # ログファイルパスを設定
-  module_log_file <- fs::path(log_dir, paste0(module_name, ".log"))
-  targets_log_file <- fs::path(log_dir, "_targets.log")
-
-  # モジュール固有のログは上書きモードで（既存ファイルを削除）
-  if (fs::file_exists(module_log_file)) {
-    fs::file_delete(module_log_file)
+  # ログファイルを初期化（既存のファイルは上書き）
+  if (fs::file_exists(log_file_func)) {
+    fs::file_delete(log_file_func)
   }
   
-  # モジュール固有のログファイルへのアペンダー（上書きモード）
-  appender_module <- appender.file(module_log_file)
+  # 個別ログ用ファイルアペンダを設定
+  # 既存のアペンダを一度削除するには flog.remove.appender が必要だが、
+  # 初回実行時には存在しないため、try でエラーを無視
+  try(futile.logger::flog.remove.appender(logger_name), silent = TRUE)
+  
+  # 個別ログ用ファイルアペンダを設定
+  futile.logger::flog.appender(futile.logger::appender.file(log_file_func), name = logger_name)
+  # 個別ログの閾値を設定
+  futile.logger::flog.threshold(log_level, name = logger_name)
 
-  # _targets.log へのアペンダー（追記モード）- _targets.Rで初期化される前提
-  appender_targets <- if (fs::file_exists(targets_log_file)) {
-    # 追記モードのアペンダー
-    function(line) {
-      cat(line, file = targets_log_file, append = TRUE)
-    }
-  } else {
-    # ファイルが存在しない場合はディレクトリを作成して新規作成
-    if (!fs::dir_exists(fs::path_dir(targets_log_file))) {
-      fs::dir_create(fs::path_dir(targets_log_file), recurse = TRUE)
-    }
-    function(line) {
-      cat(line, file = targets_log_file, append = FALSE)
-    }
-  }
+  # デフォルトロガー (_targets.log やコンソール) にも INFO レベルで開始/終了を出力
+  futile.logger::flog.info("Starting target '%s' (logging to %s)", target_name, log_file_func)
+  # 個別ログファイルに詳細な開始ログを出力
+  futile.logger::flog.trace("--- Starting target: %s ---", target_name, name = logger_name)
+  # 引数をログに出力（logger_nameを除く）
+  original_args <- list(...)
+  futile.logger::flog.debug("Arguments: %s", paste(names(original_args), unlist(original_args), sep = "=", collapse = ", "), name = logger_name)
 
-  # アペンダーを設定 (関数を返す)
-  # カスタムTeeアペンダーを使用して両方のファイルに書き込む
-  final_appender <- appender_tee_custom(appender_module, appender_targets)
+  # 本来の関数を実行。logger_name を引数に追加して渡す。
+  result <- tryCatch({
+    # 引数リストを作成し、logger_name を追加
+    args_to_pass <- c(list(...), list(logger_name = logger_name))
+    # do.call を使って関数を呼び出す
+    do.call(func, args_to_pass)
+  }, error = function(e) {
+    futile.logger::flog.fatal("Error in target '%s': %s", target_name, conditionMessage(e), name = logger_name)
+    futile.logger::flog.error("Target '%s' failed with error.", target_name) # デフォルトロガーにも記録
+    stop(e) # エラーを再度発生させてtargetsに失敗を伝える
+  })
 
-  # レイアウト関数を定義（layout.format の代わりに直接関数を定義）
-  final_layout <- function(level, msg, ...) {
-    # level: ログレベル（INFO, ERROR など）
-    # msg: ログメッセージ
-    # ...: その他のパラメータ
-    
-    # メッセージ内の書式指定子を処理
-    if (length(list(...)) > 0) {
-      # flog.debug などに渡された追加パラメータがある場合、それらを使ってフォーマット
-      msg <- do.call(sprintf, c(list(msg), list(...)))
-    }
-    
-    # 最終的なログメッセージ形式を作成
-    formatted_msg <- sprintf("[%s] [%s] [%s] %s\n", 
-                            format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-                            level,
-                            module_name,
-                            msg)
-    return(formatted_msg)
-  }
+  # 終了ログ
+  futile.logger::flog.trace("--- Finished target: %s ---", target_name, name = logger_name)
+  futile.logger::flog.info("Finished target '%s'", target_name)
 
-  # ログレベル (文字列を返す)
-  log_level_upper <- toupper(log_level)
-  valid_levels <- c("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")
-  if (!(log_level_upper %in% valid_levels)) {
-    warning(sprintf("無効なログレベル '%s' が指定されました。デフォルトの 'TRACE' を使用します。", log_level))
-    log_level_upper <- "TRACE"
-  }
+  # アペンダを削除 (次のターゲットに影響を与えないように)
+  # futile.logger::flog.remove.appender(logger_name)
+  # remove しない方が、後でログレベルを変更するなどの操作はしやすいかもしれない。
+  # targets は各ターゲットを別プロセスで実行することがあるため、影響は限定的か。
 
-  # 設定をリストで返す
-  return(
-    list(
-      appender = final_appender,
-      layout = final_layout,
-      threshold = log_level_upper,
-      module_log_path = module_log_file # 呼び出し元で参照できるようにパスも返す
-    )
-  )
+  return(result)
 }
 
-#' SummarizedExperiment オブジェクトのパイプライン履歴にモジュール実行情報を記録
+#' Rmdファイル用のロギング設定を行う
+#'
+#' Rmdファイルのセットアップチャンクで呼び出す共通ロギング設定関数。
+#' Rmdファイル名から個別ログファイルパスを生成し、TRACEレベルでログを記録する。
+#'
+#' @param experiment_id 実験ID
+#' @param rmd_path knitr::current_input()で取得したRmdファイルパス
+#'
+#' @return logger_name - ロガー名 (後続チャンクでログ出力する際に使用)
+#' @export
+setup_rmd_logging <- function(experiment_id, rmd_path = knitr::current_input()) {
+  # ファイル名から拡張子を除いた部分をログ名に使用
+  rmd_basename <- tools::file_path_sans_ext(basename(rmd_path))
+  logger_name_rmd <- paste0("rmd_", rmd_basename)
+  
+  # ログディレクトリとファイルパスを設定
+  log_dir_rmd <- fs::path("logs", experiment_id)
+  fs::dir_create(log_dir_rmd)
+  log_file_rmd <- fs::path(log_dir_rmd, paste0(rmd_basename, ".log"))
+  
+  # 既存のログファイルを削除（新規作成）
+  if (fs::file_exists(log_file_rmd)) fs::file_delete(log_file_rmd)
+  
+  # 既存のアペンダがあれば削除（再実行時にクリアするため）
+  try(futile.logger::flog.remove.appender(logger_name_rmd), silent = TRUE)
+  
+  # 個別ログ用ファイルアペンダを設定
+  futile.logger::flog.appender(futile.logger::appender.file(log_file_rmd), name = logger_name_rmd)
+  # 個別ログの閾値をTRACEに設定
+  futile.logger::flog.threshold(futile.logger::TRACE, name = logger_name_rmd)
+  
+  # デフォルトロガー (_targets.log やコンソール) にもINFOレベルで開始を出力
+  futile.logger::flog.info("Starting Rmd: %s (Log file: %s)", rmd_basename, log_file_rmd)
+  # 個別ログファイルに詳細な開始ログを出力
+  futile.logger::flog.info("--- Starting Rmd: %s ---", rmd_basename, name = logger_name_rmd)
+  futile.logger::flog.debug("experiment_id: %s", experiment_id, name = logger_name_rmd)
+  
+  # レンダリングでのデフォルトログレベルをINFOに設定
+  # HTML/コンソールにはINFO以上のみが出力され、TRACEはログファイルのみに記録される
+  futile.logger::flog.threshold(futile.logger::INFO)
+  
+  # ロガー名を返す（後続チャンクで使用するため）
+  return(logger_name_rmd)
+}
+
+#' SEオブジェクトのメタデータにパイプライン履歴を追加する (ダミー関数修正)
 #'
 #' @param se SummarizedExperiment オブジェクト
-#' @param module_name モジュール名
-#' @param description モジュールの説明
-#' @param parameters パラメータのリスト
+#' @param step_id ターゲット名など、ステップを識別するID
+#' @param function_name 実行された関数名
+#' @param parameters 使用された主要パラメータのリスト
+#' @param details その他の詳細情報
+#' @param input_dimensions 入力SEの次元 (リスト: list(rows=..., cols=...))
+#' @param output_dimensions 出力SEの次元 (リスト: list(rows=..., cols=...))
+#' @param logger_name ロガー名 (オプション)
+#' @param ... その他の引数 (将来の拡張用)
 #' @return 更新された SummarizedExperiment オブジェクト
-#' @examples
-#' se <- record_pipeline_history(se, "create_se", "SEオブジェクト作成", params)
-record_pipeline_history <- function(se, module_name, description, parameters) {
-  # パイプライン履歴リストが存在しない場合は初期化
+add_pipeline_history <- function(se, step_id, function_name, parameters, details,
+                                 input_dimensions = NULL, output_dimensions = NULL,
+                                 logger_name = NULL, ...) {
+  # ダミー実装: リストを追加
+  if (!is.list(metadata(se))) metadata(se) <- list()
   if (is.null(metadata(se)$pipeline_history)) {
     metadata(se)$pipeline_history <- list()
   }
-  
-  # モジュール実行情報を記録
-  metadata(se)$pipeline_history[[module_name]] <- list(
-    module = module_name,
-    timestamp = format(Sys.time(), '%Y-%m-%d %H:%M:%S'),
-    description = description,
+  history_entry <- list(
+    step_id = step_id,
+    function_name = function_name,
+    timestamp = Sys.time(),
     parameters = parameters,
-    session_info = capture.output(sessionInfo())
+    input_dimensions = input_dimensions,
+    output_dimensions = output_dimensions,
+    details = details
+    # ... 引数をここに追加することも可能
   )
-  
+  metadata(se)$pipeline_history <- c(metadata(se)$pipeline_history, list(history_entry))
+
+  if (!is.null(logger_name)) {
+      futile.logger::flog.debug("[%s] Pipeline history added for %s", logger_name, function_name)
+  }
   return(se)
-} 
+}
+

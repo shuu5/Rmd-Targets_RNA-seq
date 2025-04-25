@@ -1,0 +1,4 @@
+SampleID,Group,Batch
+SampleA,Control,1
+SampleB,Treatment,1
+SampleC,Control,2 

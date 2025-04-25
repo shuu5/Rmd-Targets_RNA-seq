@@ -1,0 +1,114 @@
+
+次のパッケージを付け加えます: ‘rlang’
+
+以下のオブジェクトは ‘package:data.table’ からマスクされています:
+
+    :=
+
+以下のオブジェクトは ‘package:Biobase’ からマスクされています:
+
+    exprs
+
+        R/add_biomart_gene_info.R R/create_se_object.R R/plot_library_size.R
+value   ?                         ?                    ?                    
+visible FALSE                     FALSE                FALSE                
+        R/plot_log_density.R R/subset_gene.R R/subset_sample.R R/utility.R
+value   ?                    ?               ?                 ?          
+visible FALSE                FALSE           FALSE             FALSE      
+
+次のパッケージを付け加えます: ‘testthat’
+
+以下のオブジェクトは ‘package:rlang’ からマスクされています:
+
+    is_false, is_null, is_true
+
+
+══ Testing test-subset_gene.R ══════════════════════════════════════════════════
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]INFO [2025-04-25 17:02:48] [test_logger_single] subset_gene: 関数開始
+INFO [2025-04-25 17:02:48] [test_logger_single] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_single] 適用するフィルター条件: gene_biotype == 'protein_coding'
+INFO [2025-04-25 17:02:48] [test_logger_single] フィルタリング後のSEの次元: 5 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_single] subset_gene: 関数終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 4 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 5 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 6 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 7 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 8 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 10 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 11 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 12 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 13 ]INFO [2025-04-25 17:02:48] [test_logger_multi] subset_gene: 関数開始
+INFO [2025-04-25 17:02:48] [test_logger_multi] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_multi] 適用するフィルター条件: gene_biotype == 'lncRNA' AND chromosome == 'chr1'
+INFO [2025-04-25 17:02:48] [test_logger_multi] フィルタリング後のSEの次元: 2 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_multi] subset_gene: 関数終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 14 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 15 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 16 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 17 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 18 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 19 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 20 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 21 ]INFO [2025-04-25 17:02:48] [test_logger_numeric] subset_gene: 関数開始
+INFO [2025-04-25 17:02:48] [test_logger_numeric] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_numeric] 適用するフィルター条件: mean_expression > 30
+INFO [2025-04-25 17:02:48] [test_logger_numeric] フィルタリング後のSEの次元: 4 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_numeric] subset_gene: 関数終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 22 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 23 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 24 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 25 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 26 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 27 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 28 ]INFO [2025-04-25 17:02:48] [test_logger_in] subset_gene: 関数開始
+INFO [2025-04-25 17:02:48] [test_logger_in] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_in] 適用するフィルター条件: gene_id %in% c("Gene1", "Gene5", "Gene10")
+INFO [2025-04-25 17:02:48] [test_logger_in] フィルタリング後のSEの次元: 3 行 x 4 列
+INFO [2025-04-25 17:02:48] [test_logger_in] subset_gene: 関数終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 29 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 30 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 31 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 32 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 33 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 34 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 35 ]INFO [2025-04-25 17:02:49] [test_logger_error_col] subset_gene: 関数開始
+INFO [2025-04-25 17:02:49] [test_logger_error_col] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:49] [test_logger_error_col] 適用するフィルター条件: non_existent_column == 'value'
+ERROR [2025-04-25 17:02:49] [test_logger_error_col] フィルタリング中にエラーが発生しました: In argument: `non_existent_column == "value"`.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 36 ]INFO [2025-04-25 17:02:49] [test_logger_error_syntax] subset_gene: 関数開始
+INFO [2025-04-25 17:02:49] [test_logger_error_syntax] 入力SEの次元: 10 行 x 4 列
+INFO [2025-04-25 17:02:49] [test_logger_error_syntax] 適用するフィルター条件: gene_biotype = 
+ERROR [2025-04-25 17:02:49] [test_logger_error_syntax] フィルタリング中にエラーが発生しました: <text>:2:0: 想定外の入力の終端です
+1: gene_biotype = 
+   ^
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 37 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 38 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 39 ]
+[ FAIL 1 | WARN 0 | SKIP 0 | PASS 39 ]
+
+── Failure ('test-subset_gene.R:152:3'): subset_gene errors with wrong input types ──
+`subset_gene(se = test_se, filter_conditions = list(a > 0), logger_name = "test_logger_error_type3")` threw an error with unexpected message.
+Expected match: "filter_conditions must contain characters"
+Actual message: "オブジェクト 'a' がありません"
+Backtrace:
+    ▆
+ 1. ├─testthat::expect_error(...) at test-subset_gene.R:152:3
+ 2. │ └─testthat:::quasi_capture(...)
+ 3. │   ├─testthat (local) .capture(...)
+ 4. │   │ └─base::withCallingHandlers(...)
+ 5. │   └─rlang::eval_bare(quo_get_expr(.quo), quo_get_env(.quo))
+ 6. └─global subset_gene(se = test_se, filter_conditions = list(a > 0), logger_name = "test_logger_error_type3")
+ 7.   └─base::stopifnot(...)
+
+[ FAIL 1 | WARN 0 | SKIP 0 | PASS 39 ]

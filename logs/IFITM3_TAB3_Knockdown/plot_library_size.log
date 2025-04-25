@@ -1,0 +1,3 @@
+INFO [2025-04-25 17:08:36] [log_plot_library_size] Starting plot_library_size for assay 'counts'. Target: unknown_target
+INFO [2025-04-25 17:08:36] [log_plot_library_size] Plot successfully saved to: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/library_size_counts_IFITM3_TAB3_Knockdown.png
+INFO [2025-04-25 17:08:36] [log_plot_library_size] Finished plot_library_size.

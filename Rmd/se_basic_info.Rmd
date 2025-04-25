@@ -1,0 +1,247 @@
+---
+title: "SummarizedExperiment 基本情報"
+author: "Pipeline AI Assistant"
+date: "`r Sys.Date()`"
+params:
+  experiment_id: "default_experiment"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    theme: flatly
+    df_print: paged
+    keep_md: true
+---
+
+```{r setup-logging, include=FALSE, child="Rmd/common/setup_logging.Rmd"}
+```
+
+```{r setup, include=FALSE}
+# knitr::include_graphics()が絶対パスを扱えるようにする
+options(knitr.graphics.rel_path = FALSE)
+```
+
+```{r dir-debug, echo=FALSE}
+# 診断情報を出力
+cat("現在の作業ディレクトリ:", getwd(), "\n")
+cat("knitr::current_input():", knitr::current_input(), "\n")
+cat("knitr::current_input(dir=TRUE):", knitr::current_input(dir=TRUE), "\n")
+cat("fs::path_abs(knitr::current_input()):", fs::path_abs(knitr::current_input()), "\n")
+cat("プロットファイルの存在確認:\n")
+plot_path <- "results/IFITM3_TAB3_Knockdown/plots/library_size_counts_IFITM3_TAB3_Knockdown.png"
+cat("- fs::file_exists('", plot_path, "'): ", fs::file_exists(plot_path), "\n", sep="")
+cat("- fs::file_exists('../", plot_path, "'): ", fs::file_exists(paste0("../", plot_path)), "\n", sep="")
+cat("- fs::file_exists('../../", plot_path, "'): ", fs::file_exists(paste0("../../", plot_path)), "\n", sep="")
+```
+
+```{r load-libs, include=FALSE}
+# --------------------------------------------------
+# ライブラリ読み込み & 初期ログチャンク
+# --------------------------------------------------
+# このRmd固有のライブラリを読み込み
+# (childドキュメントで基本的なものはロード済み)
+suppressPackageStartupMessages({
+  library(SummarizedExperiment)
+  library(dplyr)
+  library(tibble)
+  library(knitr)
+  library(fs)
+})
+
+# 初期ログを出力 (log_info は child ドキュメントで定義されているはず)
+log_info("--------------------------------------------------")
+log_info("Rmdレンダリング開始: se_basic_info.Rmd (ライブラリ読み込み完了)")
+log_info("実験ID: %s", params$experiment_id)
+log_info("--------------------------------------------------")
+```
+
+```{r load-data, message=FALSE, warning=FALSE}
+# --------------------------------------------------
+# データ読み込みチャンク: targetsからデータを読み込む
+# --------------------------------------------------
+log_info("targetsからデータを読み込んでいます...")
+
+se <- NULL
+path_libsize <- NULL
+path_logdensity <- NULL
+load_error <- FALSE
+
+tryCatch({
+  log_debug("ターゲットからSEオブジェクトの読み込み試行: obj_se_subset_protein_coding")
+  se <- targets::tar_read(obj_se_subset_protein_coding)
+  log_info("SEオブジェクト '%s' の読み込み成功: %d features x %d samples",
+           "obj_se_subset_protein_coding", nrow(se), ncol(se))
+
+  log_debug("ターゲットからライブラリサイズプロットパスの読み込み試行: file_plot_library_size")
+  path_libsize <- targets::tar_read(file_plot_library_size)
+  log_info("ライブラリサイズプロットパス '%s' の読み込み成功: %s", "file_plot_library_size", path_libsize)
+
+  log_debug("ターゲットからログ密度プロットパスの読み込み試行: file_plot_log_density")
+  path_logdensity <- targets::tar_read(file_plot_log_density)
+  log_info("ログ密度プロットパス '%s' の読み込み成功: %s", "file_plot_log_density", path_logdensity)
+
+}, error = function(e) {
+  log_error("1つ以上のターゲットの読み込みに失敗しました: %s", e$message)
+  load_error <<- TRUE
+})
+
+# 必須データの読み込みに失敗した場合はレンダリングを停止
+if (load_error || is.null(se)) {
+  log_error("必須データ (SEオブジェクト) の読み込みに失敗したため、レンダリングを停止します。")
+  knitr::knit_exit()
+}
+```
+
+# SummarizedExperiment 概要
+
+このセクションでは、読み込まれた SummarizedExperiment オブジェクトの基本的な概要を示します。
+
+```{r se-overview, echo=FALSE}
+# --------------------------------------------------
+# SE概要チャンク
+# --------------------------------------------------
+log_debug("Executing chunk: se-overview")
+log_info("SEオブジェクトの概要を表示しています。")
+print(se)
+
+log_info("アッセイ名: %s", paste(assayNames(se), collapse=", "))
+cat("
+**アッセイ名:**
+")
+knitr::kable(assayNames(se), col.names = "アッセイ名")
+```
+
+# アッセイデータのプレビュー (先頭10行)
+
+このセクションでは、SummarizedExperiment オブジェクトに格納されている各アッセイのプレビュー (先頭10行) を表示します。
+
+```{r assay-preview, echo=FALSE, results='asis'}
+# --------------------------------------------------
+# アッセイプレビューチャンク
+# --------------------------------------------------
+log_debug("Executing chunk: assay-preview")
+log_info("%d 個のアッセイのプレビューを生成しています。", length(assayNames(se)))
+
+for (assay_name in assayNames(se)) {
+  log_debug("アッセイ処理中: %s", assay_name)
+  cat(paste0("
+## アッセイ: `", assay_name, "`
+"))
+  tryCatch({
+    assay_data <- assay(se, assay_name)
+    # 先頭10行のみ表示し、非常に幅広なデータの場合は列を制限する可能性あり
+    preview_data <- head(assay_data, 10)
+    if (ncol(preview_data) > 50) {
+        preview_data <- preview_data[, 1:50]
+        log_warn("アッセイ '%s' は50列を超えています。最初の50列のみ表示します。", assay_name)
+        cat("
+*注意: 最初の10行と50列のみ表示しています。*
+")
+    } else {
+         cat("
+*注意: 最初の10行のみ表示しています。*
+")
+    }
+
+    kable(as.data.frame(preview_data),
+          caption = paste("アッセイのプレビュー:", assay_name),
+          rownames = TRUE) %>% print()
+     log_debug("アッセイのプレビューを表示しました: %s", assay_name)
+  }, error = function(e) {
+    log_error("アッセイ '%s' のプレビュー表示に失敗しました: %s", assay_name, e$message)
+    cat(paste0("
+*アッセイ `", assay_name, "` のプレビュー表示エラー。*
+"))
+  })
+}
+```
+
+# サンプルメタデータ (colData)
+
+このセクションでは、サンプルメタデータ (`colData`) を表示します。
+
+```{r coldata, echo=FALSE}
+# --------------------------------------------------
+# colDataチャンク
+# --------------------------------------------------
+log_debug("Executing chunk: coldata")
+log_info("colDataを表示しています: %d サンプル x %d 変数", nrow(colData(se)), ncol(colData(se)))
+tryCatch({
+  kable(as.data.frame(colData(se)),
+        caption = "サンプルメタデータ (colData)",
+        rownames = TRUE)
+}, error = function(e) {
+  log_error("colDataの表示に失敗しました: %s", e$message)
+  cat("
+*colDataの表示エラー。*
+")
+})
+```
+
+# フィーチャーメタデータ (rowData) (先頭10行)
+
+このセクションでは、フィーチャーメタデータ (`rowData`) の最初の10行を表示します。
+
+```{r rowdata, echo=FALSE}
+# --------------------------------------------------
+# rowDataチャンク
+# --------------------------------------------------
+log_debug("Executing chunk: rowdata")
+log_info("rowDataの先頭を表示しています: %d features x %d variables", nrow(rowData(se)), ncol(rowData(se)))
+tryCatch({
+    kable(head(as.data.frame(rowData(se)), 10),
+          caption = "フィーチャーメタデータ (rowData) - 先頭10行",
+          rownames = TRUE)
+}, error = function(e) {
+  log_error("rowDataの表示に失敗しました: %s", e$message)
+  cat("
+*rowDataの表示エラー。*
+")
+})
+
+```
+
+# ライブラリサイズプロット
+
+このプロットは、サンプルごとの合計カウント数 (ライブラリサイズ) を示します。
+
+```{r library-size-plot, echo=FALSE, fig.cap="サンプルごとのライブラリサイズのバープロット"}
+# --------------------------------------------------
+# ライブラリサイズプロットチャンク
+# --------------------------------------------------
+log_debug("Executing chunk: library-size-plot")
+log_debug("パスからライブラリサイズプロットを含めています: %s", path_libsize)
+if (!is.null(path_libsize) && fs::file_exists(path_libsize)) {
+  # ターゲットから取得したパスをそのまま使用
+  log_debug("プロットファイルパス: %s", path_libsize)
+  knitr::include_graphics(path_libsize)
+} else {
+  log_warn("ライブラリサイズプロットファイルが見つからないか、パスがNULLです: %s", path_libsize)
+  cat("
+*警告: ライブラリサイズプロット画像が見つかりません。*
+")
+}
+```
+
+# ログ変換済みカウントの密度プロット
+
+このプロットは、各サンプルのログ変換済みカウントの密度を示します。変換に使用された特定のアッセイは、プロットファイルを生成した `_targets.R` パイプラインの設定によって決定されます。
+
+```{r log-density-plot, echo=FALSE, fig.cap="サンプルごとのログ変換済みカウントの密度プロット"}
+# --------------------------------------------------
+# ログ密度プロットチャンク
+# --------------------------------------------------
+log_debug("Executing chunk: log-density-plot")
+log_debug("パスからログ密度プロットを含めています: %s", path_logdensity)
+if (!is.null(path_logdensity) && fs::file_exists(path_logdensity)) {
+  # ターゲットから取得したパスをそのまま使用
+  log_debug("プロットファイルパス: %s", path_logdensity)
+  knitr::include_graphics(path_logdensity)
+} else {
+  log_warn("ログ密度プロットファイルが見つからないか、パスがNULLです: %s", path_logdensity)
+  cat("
+*警告: ログ密度プロット画像が見つかりません。*
+")
+}
+```

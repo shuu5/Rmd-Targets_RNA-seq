@@ -1,0 +1,9 @@
+INFO [2025-04-25 17:07:29] [add_biomart_gene_info] 開始: biomaRt 遺伝子情報の追加
+INFO [2025-04-25 17:07:29] [add_biomart_gene_info] biomaRt クエリ用に 62700 個の遺伝子IDを準備しました。
+INFO [2025-04-25 17:07:29] [add_biomart_gene_info] biomaRt に接続中。 データセット: hsapiens_gene_ensembl, ホスト: https://ensembl.org
+INFO [2025-04-25 17:07:33] [add_biomart_gene_info] biomaRt への接続に成功しました。
+INFO [2025-04-25 17:08:33] [add_biomart_gene_info] biomaRt から 332576 件の生エントリを取得しました。
+INFO [2025-04-25 17:08:33] [add_biomart_gene_info] 重複を除去した後、61481 個の一意な遺伝子の情報を使用します。
+INFO [2025-04-25 17:08:34] [add_biomart_gene_info] 61481 個の遺伝子の情報を rowData にマージしました。
+WARN [2025-04-25 17:08:34] [add_biomart_gene_info] biomaRt で 1219 個の遺伝子の情報が見つかりませんでした。
+INFO [2025-04-25 17:08:34] [add_biomart_gene_info] 終了: biomaRt 遺伝子情報の追加が完了しました。

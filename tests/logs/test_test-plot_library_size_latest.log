@@ -1,0 +1,22 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+        R/add_biomart_gene_info.R R/create_se_object.R R/plot_library_size.R
+value   ?                         ?                    ?                    
+visible FALSE                     FALSE                FALSE                
+        R/utility.R
+value   ?          
+visible FALSE      
+
+══ Testing test-plot_library_size.R ════════════════════════════════════════════
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]INFO [2025-04-25 12:24:08] [test_logger] Starting plot_library_size for assay 'raw_counts'. Target: test_target
+INFO [2025-04-25 12:24:09] [test_logger] Plot successfully saved to: /tmp/RtmpXOgrYJ/fileecdc3a86df4a/library_size_raw_counts_test_exp.png
+INFO [2025-04-25 12:24:09] [test_logger] Finished plot_library_size.
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 4 ]ERROR [2025-04-25 12:24:09] Assay not found: 'nonexistent_assay' in the SE object. Available assays: counts
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 5 ]ERROR [2025-04-25 12:24:09] Output directory does not exist: nonexistent_dir
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 6 ] Done!

@@ -1,0 +1,90 @@
+- The project is out-of-sync -- use `renv::status()` for details.
+
+次のパッケージを付け加えます: ‘rlang’
+
+以下のオブジェクトは ‘package:data.table’ からマスクされています:
+
+    :=
+
+以下のオブジェクトは ‘package:Biobase’ からマスクされています:
+
+    exprs
+
+        R/add_biomart_gene_info.R R/create_se_object.R R/plot_heatmap.R
+value   ?                         ?                    ?               
+visible FALSE                     FALSE                FALSE           
+        R/plot_library_size.R R/plot_log_density.R R/subset_gene.R
+value   ?                     ?                    ?              
+visible FALSE                 FALSE                FALSE          
+        R/subset_sample.R R/utility.R
+value   ?                 ?          
+visible FALSE             FALSE      
+
+次のパッケージを付け加えます: ‘testthat’
+
+以下のオブジェクトは ‘package:rlang’ からマスクされています:
+
+    is_false, is_null, is_true
+
+
+══ Testing test-plot_heatmap.R ═════════════════════════════════════════════════
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 0 ]Created test directory: /tmp/RtmpUHPfcy/test_plot_heatmap_output 
+INFO [2025-04-25 17:50:23] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/basic_heatmap*.png'
+INFO [2025-04-25 17:50:23] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:23] log2(count + 1) 変換を実行します。
+INFO [2025-04-25 17:50:23] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/basic_heatmap.png
+INFO [2025-04-25 17:50:23] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/basic_heatmap.png
+INFO [2025-04-25 17:50:23] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 4 ]INFO [2025-04-25 17:50:24] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_heatmap*.png'
+INFO [2025-04-25 17:50:24] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:24] log2(count + 1) 変換を実行します。
+INFO [2025-04-25 17:50:24] 列アノテーションを準備します: [condition, batch]
+INFO [2025-04-25 17:50:24] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_heatmap_annot_condition_batch.png
+INFO [2025-04-25 17:50:24] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_heatmap_annot_condition_batch.png
+INFO [2025-04-25 17:50:24] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 5 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 6 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 7 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 8 ]INFO [2025-04-25 17:50:24] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_numeric_heatmap*.png'
+INFO [2025-04-25 17:50:24] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:24] log2(count + 1) 変換を実行します。
+INFO [2025-04-25 17:50:24] 列アノテーションを準備します: [condition, numeric_var]
+INFO [2025-04-25 17:50:24] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_numeric_heatmap_annot_condition_numeric_var.png
+INFO [2025-04-25 17:50:24] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/annot_numeric_heatmap_annot_condition_numeric_var.png
+INFO [2025-04-25 17:50:24] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 10 ]INFO [2025-04-25 17:50:24] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/nolog_heatmap*.png'
+INFO [2025-04-25 17:50:24] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:24] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/nolog_heatmap.png
+INFO [2025-04-25 17:50:24] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/nolog_heatmap.png
+INFO [2025-04-25 17:50:24] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 11 ]INFO [2025-04-25 17:50:24] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/noscale_heatmap*.png'
+INFO [2025-04-25 17:50:24] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:24] log2(count + 1) 変換を実行します。
+INFO [2025-04-25 17:50:24] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/noscale_heatmap.png
+INFO [2025-04-25 17:50:25] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/noscale_heatmap.png
+INFO [2025-04-25 17:50:25] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 12 ]INFO [2025-04-25 17:50:25] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/noclust_heatmap*.png'
+INFO [2025-04-25 17:50:25] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:25] log2(count + 1) 変換を実行します。
+INFO [2025-04-25 17:50:25] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/noclust_heatmap.png
+INFO [2025-04-25 17:50:25] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/noclust_heatmap.png
+INFO [2025-04-25 17:50:25] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 13 ]INFO [2025-04-25 17:50:25] 関数 plot_heatmap 開始: assay='counts', output='/tmp/RtmpUHPfcy/test_plot_heatmap_output/comb_opt_heatmap*.png'
+INFO [2025-04-25 17:50:25] アッセイ 'counts' からデータを抽出します。
+INFO [2025-04-25 17:50:25] ヒートマップをファイルに保存します: /tmp/RtmpUHPfcy/test_plot_heatmap_output/comb_opt_heatmap.png
+INFO [2025-04-25 17:50:25] ヒートマップの保存が完了しました: /tmp/RtmpUHPfcy/test_plot_heatmap_output/comb_opt_heatmap.png
+INFO [2025-04-25 17:50:25] 関数 plot_heatmap 終了
+
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 14 ]Cleaned up test directory: /tmp/RtmpUHPfcy/test_plot_heatmap_output 
+ Done!

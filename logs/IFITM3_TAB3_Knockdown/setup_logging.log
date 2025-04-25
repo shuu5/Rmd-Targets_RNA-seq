@@ -1,0 +1,31 @@
+INFO [2025-04-25 17:11:41] --- Starting Rmd: setup_logging ---
+DEBUG [2025-04-25 17:11:41] experiment_id: IFITM3_TAB3_Knockdown
+INFO [2025-04-25 17:11:41] Rmdファイル 'setup_logging.Rmd' のロギング設定完了 (ログファイル: logs/IFITM3_TAB3_Knockdown/setup_logging.log)
+INFO [2025-04-25 17:11:41] --------------------------------------------------
+INFO [2025-04-25 17:11:41] Rmdレンダリング開始: se_basic_info.Rmd (ライブラリ読み込み完了)
+INFO [2025-04-25 17:11:41] 実験ID: IFITM3_TAB3_Knockdown
+INFO [2025-04-25 17:11:41] --------------------------------------------------
+INFO [2025-04-25 17:11:41] targetsからデータを読み込んでいます...
+DEBUG [2025-04-25 17:11:41] ターゲットからSEオブジェクトの読み込み試行: obj_se_subset_protein_coding
+INFO [2025-04-25 17:11:41] SEオブジェクト 'obj_se_subset_protein_coding' の読み込み成功: 20063 features x 12 samples
+DEBUG [2025-04-25 17:11:41] ターゲットからライブラリサイズプロットパスの読み込み試行: file_plot_library_size
+INFO [2025-04-25 17:11:41] ライブラリサイズプロットパス 'file_plot_library_size' の読み込み成功: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/library_size_counts_IFITM3_TAB3_Knockdown.png
+DEBUG [2025-04-25 17:11:41] ターゲットからログ密度プロットパスの読み込み試行: file_plot_log_density
+INFO [2025-04-25 17:11:41] ログ密度プロットパス 'file_plot_log_density' の読み込み成功: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/log_density_counts_IFITM3_TAB3_Knockdown.png
+DEBUG [2025-04-25 17:11:41] Executing chunk: se-overview
+INFO [2025-04-25 17:11:41] SEオブジェクトの概要を表示しています。
+INFO [2025-04-25 17:11:41] アッセイ名: counts
+DEBUG [2025-04-25 17:11:41] Executing chunk: assay-preview
+INFO [2025-04-25 17:11:41] 1 個のアッセイのプレビューを生成しています。
+DEBUG [2025-04-25 17:11:41] アッセイ処理中: counts
+DEBUG [2025-04-25 17:11:41] アッセイのプレビューを表示しました: counts
+DEBUG [2025-04-25 17:11:41] Executing chunk: coldata
+INFO [2025-04-25 17:11:41] colDataを表示しています: 12 サンプル x 5 変数
+DEBUG [2025-04-25 17:11:41] Executing chunk: rowdata
+INFO [2025-04-25 17:11:41] rowDataの先頭を表示しています: 20063 features x 5 variables
+DEBUG [2025-04-25 17:11:41] Executing chunk: library-size-plot
+DEBUG [2025-04-25 17:11:41] パスからライブラリサイズプロットを含めています: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/library_size_counts_IFITM3_TAB3_Knockdown.png
+DEBUG [2025-04-25 17:11:41] プロットファイルパス: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/library_size_counts_IFITM3_TAB3_Knockdown.png
+DEBUG [2025-04-25 17:11:41] Executing chunk: log-density-plot
+DEBUG [2025-04-25 17:11:41] パスからログ密度プロットを含めています: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/log_density_counts_IFITM3_TAB3_Knockdown.png
+DEBUG [2025-04-25 17:11:41] プロットファイルパス: /home/rstudio/projects/Rmd_targets_RNA-seq/results/IFITM3_TAB3_Knockdown/plots/log_density_counts_IFITM3_TAB3_Knockdown.png
