@@ -2,9 +2,9 @@
 
 ## 1. 概要
 - **目的:** SummarizedExperiment オブジェクトのカウントデータからサンプル間の関係性を視覚化するためのヒートマップを作成する。
-- **機能:** 指定されたアッセイのカウントデータに対し、ログ変換とスケーリングを行い、`pheatmap` を用いてヒートマップを描画し、指定されたディレクトリにPNGファイルとして保存する。オプションで列アノテーションを追加できる。
+- **機能:** 指定されたアッセイのカウントデータに対し、ログ変換とスケーリングを行い、`pheatmap` を用いてヒートマップを描画し、指定されたディレクトリにPNGファイルとして保存する。オプションで行名を `rowData` の `gene_symbol` に設定したり、行名・列名の表示/非表示を切り替えたり、列アノテーションを追加できる。
 - **作成日:** 2025-04-25
-- **更新日:** 2025-04-25
+- **更新日:** 2025-04-26
 
 ## 2. 機能詳細
 - `SummarizedExperiment` オブジェクトから指定されたアッセイデータを抽出する。
@@ -13,6 +13,8 @@
 - `pheatmap::pheatmap` 関数を使用してヒートマップを描画する。
     - クラスタリングは行・列ともにデフォルトで有効。
     - 色は `RColorBrewer` の `RdYlBu` パレットを使用。
+    - **行名:** `rowData(se)$gene_symbol` を使用する。
+    - **行名・列名の表示:** `show_rownames`, `show_colnames` 引数で制御可能。
 - `colData` から指定された列を抽出し、ヒートマップの列アノテーションとして使用する。
 - 描画されたヒートマップを指定されたパスにPNGファイルとして保存する。
 - この関数は、主に探索的データ解析 (EDA) や QC のステップで使用されることを想定する (`project-rule.md`)。
@@ -20,7 +22,7 @@
 ## 3. 入力 (Arguments)
 - **se:**
     - データ型: `SummarizedExperiment`
-    - 説明: 入力データオブジェクト。`assay` スロットにカウントデータ、`colData` スロットにサンプル情報が含まれている必要がある。
+    - 説明: 入力データオブジェクト。`assay` スロットにカウントデータ、`colData` スロットにサンプル情報、`rowData` スロットに `gene_symbol` 列が含まれている必要がある。
     - 必須/任意: 必須
 - **assay_name:**
     - データ型: `character` (length 1)
@@ -49,6 +51,16 @@
 - **cluster_cols:**
     - データ型: `logical` (length 1)
     - 説明: 列のクラスタリングを行うかどうか。
+    - 必須/任意: 任意
+    - デフォルト値: `TRUE`
+- **show_rownames:**
+    - データ型: `logical` (length 1)
+    - 説明: ヒートマップに行名 (`rowData(se)$gene_symbol`) を表示するかどうか。
+    - 必須/任意: 任意
+    - デフォルト値: `TRUE`
+- **show_colnames:**
+    - データ型: `logical` (length 1)
+    - 説明: ヒートマップに列名 (サンプル名) を表示するかどうか。
     - 必須/任意: 任意
     - デフォルト値: `TRUE`
 - **output_dir:**
@@ -80,20 +92,25 @@
    - `assay_name` が `assayNames(se)` に存在することを確認。
    - `annotation_cols` が `NULL` でない場合、それらが `colnames(colData(se))` に存在することを確認。
    - `output_dir` が存在し、書き込み可能であることを確認。
+   - **`rowData(se)` に `gene_symbol` 列が存在することを確認。**
 2. **データ抽出:** `assay(se, assay_name)` で指定されたカウントデータを抽出。
 3. **ログ変換:** `log_transform = TRUE` の場合、`log2(counts + 1)` を計算。
 4. **アノテーション準備:**
    - `annotation_cols` が指定されている場合、`colData(se)` から該当する列を選択し、`data.frame` を作成。
-5. **ヒートマップ描画と保存:**
+5. **行名準備:** `rowData(se)$gene_symbol` を取得。
+6. **ヒートマップ描画と保存:**
    - `pheatmap::pheatmap()` を呼び出す。
      - `mat`: ログ変換後のデータ。
      - `annotation_col`: 準備したアノテーションデータフレーム (指定されている場合)。
      - `scale`: `scale_rows` が `TRUE` なら `"row"`、`FALSE` なら `"none"`。
      - `cluster_rows`, `cluster_cols`: 引数で指定された値。
      - `color`: `RColorBrewer::brewer.pal(n = 9, name = "RdYlBu")` などでカラースケールを指定。
+     - **`labels_row`:** 準備した `gene_symbol` ベクトルを指定。
+     - **`show_rownames`:** 引数 `show_rownames` の値を指定。
+     - **`show_colnames`:** 引数 `show_colnames` の値を指定。
      - `filename`: 生成するファイルパス (`{output_dir}/{filename_prefix}{annotation_suffix}.png`) を指定。**絶対パスを使用する。**
      - `width`, `height`: 必要に応じて調整。
-6. **戻り値:** 生成されたPNGファイルの絶対パス (`fs::path` オブジェクト) を返す。
+7. **戻り値:** 生成されたPNGファイルの絶対パス (`fs::path` オブジェクト) を返す。
 
 ## 6. 副作用 (Side Effects)
 - **ファイルI/O:** 指定された `output_dir` にヒートマップのPNGファイルを書き込む。
@@ -141,18 +158,21 @@
         - 1つまたは複数の有効な `annotation_cols` を指定し、アノテーション付きPNGファイルが生成されることを確認。
         - `log_transform = FALSE`, `scale_rows = FALSE` で実行した場合の結果を確認 (目視またはスナップショットテスト)。
         - `cluster_rows = FALSE`, `cluster_cols = FALSE` で実行した場合の結果を確認。
+        - **`show_rownames = FALSE`, `show_colnames = FALSE` で実行し、行名・列名が表示されないことを確認。**
+        - **`gene_symbol` を含む `rowData` を持つデータで実行し、行名が `gene_symbol` になっていることを確認。**
     - **異常系:**
         - `assay_name` が存在しない場合にエラーが発生することを確認。
         - `annotation_cols` に存在しない列名が含まれる場合に警告が出て、処理は続行される (またはエラーにするか要検討) ことを確認。
         - `output_dir` が存在しない場合にエラーが発生する (または作成するか要検討) ことを確認。
         - 入力 `se` が `SummarizedExperiment` でない場合にエラー。
         - カウントデータが数値でない場合にエラー。
+        - **`rowData(se)` に `gene_symbol` 列が存在しない場合にエラーが発生することを確認。**
     - **副作用:**
         - 指定されたパスに期待されるファイル名のPNGファイルが実際に生成されていることを確認 (`expect_true(file.exists(...))`)。
         - 返り値が生成されたファイルの絶対パス (`fs::path`) であることを確認。
-- **テストデータ:** `tests/testdata/plot_heatmap/` に、少数の遺伝子とサンプルを含む `SummarizedExperiment` オブジェクト (RDS形式) と、期待される出力ファイル名のパターンを用意する。
+- **テストデータ:** `tests/testdata/plot_heatmap/` に、少数の遺伝子とサンプルを含む `SummarizedExperiment` オブジェクト (RDS形式、`gene_symbol` 列を含むものと含まないもの)、および期待される出力ファイル名のパターンを用意する。
 
 ## 9. 依存関係
-- **R パッケージ:** `SummarizedExperiment`, `pheatmap`, `RColorBrewer`, `futile.logger`, `fs`, `dplyr` (アノテーション処理用)
+- **R パッケージ:** `SummarizedExperiment`, `pheatmap`, `RColorBrewer`, `futile.logger`, `fs`, `dplyr` (アノテーション処理用), `S4Vectors` (`rowData` アクセス用)
 - **自作関数:** なし
 - `renv` で管理される。 

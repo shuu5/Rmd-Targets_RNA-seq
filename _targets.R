@@ -125,8 +125,10 @@ list(
       # --- plot_heatmap の引数 ---
       se = obj_se_subset_protein_coding, # obj_se_subset_protein_coding に依存
       assay_name = "counts",
-      annotation_cols = c("Group"), # "Group" 列でアノテーション (存在しない場合は NULL に変更)
+      annotation_cols = c("cell_line","target_gene", "condition"), # "Group" 列でアノテーション (存在しない場合は NULL に変更)
       output_dir = fs::path("results", experiment_id, "plots"),
+      show_rownames = TRUE,
+      show_colnames = TRUE,
       filename_prefix = "heatmap_protein_coding_counts",
       # --- run_with_logging の引数 ---
       target_name = "file_heatmap_protein_coding_counts",
